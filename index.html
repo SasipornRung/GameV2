@@ -3,373 +3,479 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huai Khwang Real Estate Simulator (2000-2025)</title>
+    <title>Huai Khwang: Pro Investor Simulator</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
-        .stat-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .event-log { height: 150px; overflow-y: auto; background: #1f2937; color: #10b981; font-family: monospace; padding: 10px; border-radius: 4px; }
-        .positive { color: green; }
-        .negative { color: red; }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .progress-bar-fill { transition: width 0.5s ease-in-out; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="p-6">
+<body>
+    <div id="root"></div>
 
-    <div id="setupScreen" class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
-        <h1 class="text-3xl font-bold mb-2 text-blue-900">Real Estate Investment Simulator</h1>
-        <p class="text-gray-600 mb-6">Huai Khwang Edition (2000 - 2025)</p>
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
         
-        <h2 class="text-xl font-semibold mb-4">Select Investor Archetype:</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="archetypeList">
-            </div>
-    </div>
+        // --- CONFIG & DATA FROM PDF ---
+        const ARCHETYPES = {
+            fresh_grad: { id: 'fresh_grad', name: "Fresh Graduate", salary: 12000, risk: 4, saving: 0.15, growth: 0.08, dti: 0.5, desc: "เงินน้อยแต่ใจสู้ เน้นเติบโตเร็ว (High Risk High Reward)" },
+            corporate: { id: 'corporate', name: "Corporate Climber", salary: 25000, risk: 3, saving: 0.30, growth: 0.12, dti: 0.4, desc: "มนุษย์เงินเดือนผู้มีวินัย เครดิตดี กู้ผ่านง่าย" },
+            power_couple: { id: 'power_couple', name: "Power Couple", salary: 50000, risk: 2, saving: 0.40, growth: 0.07, dti: 0.35, desc: "รายได้คู่ กู้ร่วมผ่านฉลุย เน้นความมั่นคง" },
+            inheritance: { id: 'inheritance', name: "Inheritance Accelerator", salary: 30000, risk: 5, saving: 0.10, growth: 0.04, dti: 0.5, startCash: 2000000, desc: "มีเงินก้นถุง 2 ล้าน! ล้มบนฟูกได้สบาย" }
+        };
 
-    <div id="gameDashboard" class="hidden max-w-6xl mx-auto">
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div class="stat-card border-l-4 border-blue-500">
-                <div class="text-gray-500 text-sm">Year</div>
-                <div class="text-2xl font-bold" id="yearDisplay">2000</div>
-            </div>
-            <div class="stat-card border-l-4 border-green-500">
-                <div class="text-gray-500 text-sm">Cash on Hand</div>
-                <div class="text-2xl font-bold text-green-600" id="cashDisplay">0</div>
-            </div>
-            <div class="stat-card border-l-4 border-purple-500">
-                <div class="text-gray-500 text-sm">Net Worth</div>
-                <div class="text-2xl font-bold text-purple-600" id="netWorthDisplay">0</div>
-            </div>
-            <div class="stat-card border-l-4 border-yellow-500">
-                <div class="text-gray-500 text-sm">Monthly Salary</div>
-                <div class="text-2xl font-bold" id="salaryDisplay">0</div>
-            </div>
-             <div class="stat-card border-l-4 border-red-500">
-                <div class="text-gray-500 text-sm">Age</div>
-                <div class="text-2xl font-bold" id="ageDisplay">22</div>
-            </div>
-        </div>
+        const TIMELINE = {
+            2000: { event: "Baseline Year", severity: 1, sentiment: 50, rate: 6.0, typeMod: {1:1, 2:1, 3:1} },
+            2001: { event: "Dot-com Hangover", severity: 2, sentiment: 40, rate: 5.5, typeMod: {1:0.97, 2:0.98, 3:0.95} },
+            2002: { event: "Slow Recovery", severity: 1, sentiment: 45, rate: 5.0, typeMod: {1:1.01, 2:1.01, 3:1.01} },
+            2003: { event: "SARS Shock", severity: 3, sentiment: 30, rate: 4.5, typeMod: {1:0.95, 2:0.95, 3:0.90} },
+            2004: { event: "MRT Launch (Huai Khwang)", severity: 5, sentiment: 80, rate: 4.0, typeMod: {1:1.08, 2:1.15, 3:1.20} }, // Boom
+            2005: { event: "Golden Age Begins", severity: 5, sentiment: 90, rate: 3.5, typeMod: {1:1.12, 2:1.15, 3:1.25} },
+            2006: { event: "Boom Continues", severity: 5, sentiment: 90, rate: 4.0, typeMod: {1:1.10, 2:1.12, 3:1.20} },
+            2007: { event: "Peak Euphoria", severity: 5, sentiment: 95, rate: 4.5, typeMod: {1:1.05, 2:1.08, 3:1.15} },
+            2008: { event: "Lehman Crisis (Crash)", severity: 5, sentiment: 10, rate: 5.0, typeMod: {1:0.82, 2:0.88, 3:0.75} }, // Bust
+            2009: { event: "Stimulus Recovery", severity: 3, sentiment: 40, rate: 3.0, typeMod: {1:1.05, 2:1.08, 3:1.00} },
+            2010: { event: "Rebuild Phase", severity: 2, sentiment: 50, rate: 3.2, typeMod: {1:1.07, 2:1.09, 3:1.10} },
+            2014: { event: "Coup Shock", severity: 3, sentiment: 35, rate: 3.5, typeMod: {1:0.95, 2:1.00, 3:0.95} },
+            2015: { event: "Chinese Boom", severity: 4, sentiment: 75, rate: 3.0, typeMod: {1:1.05, 2:1.10, 3:1.30} }, // Type 3 spikes
+            2018: { event: "LTV Crackdown", severity: 3, sentiment: 40, rate: 3.5, typeMod: {1:0.97, 2:1.00, 3:1.02} },
+            2020: { event: "COVID-19 Pandemic", severity: 5, sentiment: 5, rate: 2.5, typeMod: {1:0.85, 2:0.95, 3:0.65} }, // Crash
+            2021: { event: "K-Shaped Recovery", severity: 3, sentiment: 60, rate: 2.0, typeMod: {1:0.95, 2:1.02, 3:1.40} }, // Anomaly
+            2022: { event: "Rate Hike Shock", severity: 4, sentiment: 30, rate: 4.0, typeMod: {1:0.95, 2:0.98, 3:1.05} },
+            2023: { event: "China Reopening?", severity: 2, sentiment: 50, rate: 4.5, typeMod: {1:1.00, 2:1.02, 3:1.08} },
+            2024: { event: "The New Normal", severity: 1, sentiment: 55, rate: 4.5, typeMod: {1:1.02, 2:1.03, 3:1.05} },
+            2025: { event: "Orange Line Future", severity: 4, sentiment: 70, rate: 4.0, typeMod: {1:1.05, 2:1.10, 3:1.15} }
+        };
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <div class="lg:col-span-2 space-y-6">
-                <div class="bg-blue-900 text-white p-4 rounded-lg shadow">
-                    <h3 class="font-bold text-lg border-b border-blue-700 pb-2 mb-2">📢 Macro Event News</h3>
-                    <p id="eventDisplay" class="text-xl">Welcome to Year 2000. The market is baseline.</p>
-                    <p id="marketSentiment" class="text-sm text-blue-300 mt-2">Sentiment: Neutral</p>
-                </div>
+        const PROPERTIES = {
+            1: { type: 1, name: "Type 1: Entry Level", basePrice: 1200000, rent: 6000, desc: "Low-Rise, ซอยลึก, เน้นปล่อยเช่า Yield สูง แต่ราคาไม่วิ่ง", volatility: 'High' },
+            2: { type: 2, name: "Type 2: Real Demand", basePrice: 2500000, rent: 12000, desc: "Mid-Rise, ใกล้ MRT, มาตรฐานคนทำงาน, สภาพคล่องดี", volatility: 'Medium' },
+            3: { type: 3, name: "Type 3: Prime Luxury", basePrice: 5000000, rent: 22000, desc: "High-Rise, ติดถนนใหญ่, เน้น Capital Gain, เสี่ยงสูงถ้าไม่มีต่างชาติ", volatility: 'Extreme' }
+        };
 
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h3 class="font-bold text-xl mb-4 text-gray-800">🏢 Property Market (Huai Khwang)</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="border p-4 rounded hover:shadow-md transition">
-                            <div class="bg-gray-200 text-xs font-bold px-2 py-1 rounded inline-block mb-2">Type 1: Entry Level</div>
-                            <h4 class="font-bold">Low-Rise / Deep Soi</h4>
-                            <p class="text-sm text-gray-500">25 sq.m. Studio</p>
-                            <div class="my-3">
-                                <span class="block text-2xl font-bold text-blue-600" id="priceT1">0</span>
-                                <span class="text-xs text-gray-500">THB/Unit</span>
-                            </div>
-                            <button onclick="buyProperty(1)" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">Buy (20% Down)</button>
-                        </div>
-                        <div class="border p-4 rounded hover:shadow-md transition border-blue-200 bg-blue-50">
-                            <div class="bg-blue-200 text-blue-800 text-xs font-bold px-2 py-1 rounded inline-block mb-2">Type 2: Real Demand</div>
-                            <h4 class="font-bold">Mid-Rise / Near MRT</h4>
-                            <p class="text-sm text-gray-500">35 sq.m. 1-Bed</p>
-                            <div class="my-3">
-                                <span class="block text-2xl font-bold text-blue-600" id="priceT2">0</span>
-                                <span class="text-xs text-gray-500">THB/Unit</span>
-                            </div>
-                            <button onclick="buyProperty(2)" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">Buy (20% Down)</button>
-                        </div>
-                        <div class="border p-4 rounded hover:shadow-md transition border-yellow-200 bg-yellow-50">
-                            <div class="bg-yellow-200 text-yellow-800 text-xs font-bold px-2 py-1 rounded inline-block mb-2">Type 3: Prime Luxury</div>
-                            <h4 class="font-bold">High-Rise / Main Road</h4>
-                            <p class="text-sm text-gray-500">50 sq.m. 2-Bed</p>
-                            <div class="my-3">
-                                <span class="block text-2xl font-bold text-blue-600" id="priceT3">0</span>
-                                <span class="text-xs text-gray-500">THB/Unit</span>
-                            </div>
-                            <button onclick="buyProperty(3)" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">Buy (20% Down)</button>
-                        </div>
+        // --- COMPONENTS ---
+
+        function ProgressBar({ label, value, max, color }) {
+            const width = Math.min(100, Math.max(0, (value / max) * 100));
+            return (
+                <div className="mb-2">
+                    <div className="flex justify-between text-xs mb-1">
+                        <span className="text-gray-400">{label}</span>
+                        <span className={`font-mono font-bold text-${color}-400`}>{value}/{max}</span>
+                    </div>
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div className={`h-full bg-${color}-500 progress-bar-fill`} style={{ width: `${width}%` }}></div>
                     </div>
                 </div>
+            );
+        }
 
-                <div class="bg-white p-4 rounded-lg shadow">
-                    <h3 class="font-bold mb-2">📜 Activity Log</h3>
-                    <div id="gameLog" class="event-log"></div>
-                </div>
-            </div>
-
-            <div class="space-y-6">
-                <div class="bg-white p-6 rounded-lg shadow text-center">
-                    <button onclick="nextYear()" class="w-full bg-green-600 text-white text-xl font-bold py-4 rounded-lg hover:bg-green-700 shadow-lg transform transition hover:scale-105">
-                        Start Next Year ▶
-                    </button>
-                    <p class="text-xs text-gray-400 mt-2">Proceeds to <span id="nextYearDisplay">2001</span></p>
-                </div>
-
-                <div class="bg-white p-6 rounded-lg shadow h-96 overflow-y-auto">
-                    <h3 class="font-bold text-lg mb-4 border-b pb-2">📂 My Portfolio</h3>
-                    <div id="portfolioList" class="space-y-3">
-                        <p class="text-gray-400 text-center italic mt-10">No properties owned yet.</p>
+        function StatCard({ icon, label, value, subValue, color = "blue" }) {
+            return (
+                <div className="glass p-4 rounded-xl flex items-center gap-4">
+                    <div className={`p-3 rounded-lg bg-${color}-500/20 text-${color}-400`}>
+                        {icon}
+                    </div>
+                    <div>
+                        <p className="text-xs text-gray-400 uppercase tracking-wider">{label}</p>
+                        <p className="text-xl font-bold font-mono">{value}</p>
+                        {subValue && <p className="text-xs text-gray-500">{subValue}</p>}
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // --- 1. DATA: ARCHETYPES [Source: Page 2-4] ---
-        const archetypes = {
-            fresh_grad: { name: "Fresh Graduate", nameTH: "รุ่นใหม่หัวใจเกินร้อย", salary: 12000, growth: 0.08, saving: 0.15, risk: 4, desc: "Aggressive start, high growth." },
-            corporate: { name: "Corporate Climber", nameTH: "นักปีนบันไดองค์กร", salary: 25000, growth: 0.12, saving: 0.30, risk: 3, desc: "High savings, disciplined." },
-            power_couple: { name: "Power Couple", nameTH: "คู่ดับเบิ้ลตัวคูณ", salary: 50000, growth: 0.07, saving: 0.40, risk: 2, desc: "Double income, very safe." },
-            inheritance: { name: "Inheritance Accelerator", nameTH: "ลูกรวย Gen 2", salary: 30000, growth: 0.04, saving: 0.10, risk: 5, startCash: 2000000, desc: "Starts with 2M THB capital." },
-            fomo: { name: "FOMO Gambler", nameTH: "นักเสี่ยงโชคตามกระแส", salary: 18000, growth: 0.06, saving: 0.10, risk: 5, desc: "High risk, low savings." }
-        };
-
-        // --- 2. DATA: TIMELINE & EVENTS [Source: Page 14-22] ---
-        const timeline = {
-            2000: { event: "Baseline Year", severity: 0, multT1: 1.0, multT2: 1.0, multT3: 1.0 },
-            2001: { event: "Dot-com Hangover", severity: 2, multT1: 0.97, multT2: 0.97, multT3: 0.97 },
-            2002: { event: "Slow Recovery", severity: 1, multT1: 1.01, multT2: 1.01, multT3: 1.01 },
-            2003: { event: "SARS Shock", severity: 3, multT1: 0.95, multT2: 0.95, multT3: 0.88 },
-            2004: { event: "MRT Launch (Huai Khwang)", severity: 4, multT1: 1.08, multT2: 1.12, multT3: 1.18 },
-            2005: { event: "Golden Age Begins", severity: 5, multT1: 1.12, multT2: 1.15, multT3: 1.20 },
-            2006: { event: "Boom Continues", severity: 5, multT1: 1.12, multT2: 1.15, multT3: 1.20 },
-            2007: { event: "Peak Euphoria", severity: 5, multT1: 1.12, multT2: 1.15, multT3: 1.20 },
-            2008: { event: "Lehman Crisis", severity: 5, multT1: 0.82, multT2: 0.88, multT3: 0.75 },
-            2009: { event: "Stimulus Recovery", severity: 3, multT1: 1.05, multT2: 1.08, multT3: 0.95 },
-            2010: { event: "Rebuild Phase", severity: 2, multT1: 1.07, multT2: 1.09, multT3: 1.10 },
-            2011: { event: "Floods (Minimal Impact)", severity: 2, multT1: 1.07, multT2: 1.09, multT3: 1.10 },
-            2012: { event: "Steady Growth", severity: 2, multT1: 1.07, multT2: 1.09, multT3: 1.10 },
-            2013: { event: "Political Noise", severity: 2, multT1: 1.07, multT2: 1.09, multT3: 1.10 },
-            2014: { event: "Coup Shock", severity: 3, multT1: 0.95, multT2: 0.95, multT3: 0.95 },
-            2015: { event: "Chinese Boom Begins", severity: 4, multT1: 1.05, multT2: 1.08, multT3: 1.25 },
-            2016: { event: "Supply Overhang", severity: 2, multT1: 1.02, multT2: 1.05, multT3: 1.15 },
-            2017: { event: "Market Saturation", severity: 2, multT1: 1.02, multT2: 1.05, multT3: 1.15 },
-            2018: { event: "LTV Crackdown", severity: 3, multT1: 0.97, multT2: 1.01, multT3: 1.08 },
-            2019: { event: "Trade War / Sideways", severity: 2, multT1: 0.98, multT2: 1.01, multT3: 1.03 },
-            2020: { event: "COVID-19 Crash", severity: 5, multT1: 0.92, multT2: 0.95, multT3: 0.65 },
-            2021: { event: "K-Shaped Recovery", severity: 3, multT1: 0.97, multT2: 1.02, multT3: 1.40 },
-            2022: { event: "Rate Shock", severity: 4, multT1: 0.95, multT2: 0.98, multT3: 1.05 },
-            2023: { event: "China Reopening", severity: 2, multT1: 1.00, multT2: 1.02, multT3: 1.08 },
-            2024: { event: "Consolidation", severity: 1, multT1: 1.01, multT2: 1.03, multT3: 1.05 },
-            2025: { event: "Orange Line Opens", severity: 4, multT1: 1.05, multT2: 1.10, multT3: 1.15 }
-        };
-
-        // --- 3. DATA: PROPERTY BASE STATS [Source: Page 14] ---
-        const propertyTypes = {
-            1: { name: "Type 1 (Entry)", sqm: 25, basePrice: 40000, rent: 350 },
-            2: { name: "Type 2 (Real)", sqm: 35, basePrice: 55000, rent: 450 },
-            3: { name: "Type 3 (Luxury)", sqm: 50, basePrice: 80000, rent: 600 }
-        };
-
-        // --- GAME STATE ---
-        let state = {
-            year: 2000,
-            archetype: null,
-            salary: 0,
-            cash: 0,
-            netWorth: 0,
-            portfolio: [],
-            currentPrices: { 1: 0, 2: 0, 3: 0 }
-        };
-
-        // --- INITIALIZATION ---
-        function init() {
-            const list = document.getElementById('archetypeList');
-            for (const key in archetypes) {
-                const arch = archetypes[key];
-                list.innerHTML += `
-                    <div class="border p-4 rounded-lg hover:bg-blue-50 cursor-pointer transition" onclick="startGame('${key}')">
-                        <h3 class="font-bold text-lg">${arch.nameTH}</h3>
-                        <p class="text-sm text-gray-500">${arch.name}</p>
-                        <div class="mt-2 text-sm">
-                            <p>💰 Start Salary: ${arch.salary.toLocaleString()}</p>
-                            <p>📈 Risk: ${arch.risk}/5 | Saving: ${arch.saving*100}%</p>
-                        </div>
-                    </div>
-                `;
-            }
+            );
         }
 
-        function startGame(key) {
-            const arch = archetypes[key];
-            state.archetype = arch;
-            state.salary = arch.salary;
-            state.cash = (arch.salary * 12 * arch.saving) + (arch.startCash || 0); // Start with 1 year savings + bonus
-            state.year = 2000;
+        function Game() {
+            // --- STATE ---
+            const [gameState, setGameState] = useState('SETUP'); // SETUP, PLAYING, END
+            const [year, setYear] = useState(2000);
+            const [player, setPlayer] = useState({});
+            const [assets, setAssets] = useState([]);
+            const [logs, setLogs] = useState([]);
+            const [modal, setModal] = useState(null); // BUY, EVENT, REPORT
+
+            // --- COMPUTED STATS ---
+            const currentEvent = TIMELINE[year] || { event: "Quiet Year", severity: 0, sentiment: 50, rate: 4.0, typeMod: {1:1.02, 2:1.03, 3:1.04} };
             
-            // Set Base Prices
-            updatePrices();
-
-            // UI Switch
-            document.getElementById('setupScreen').classList.add('hidden');
-            document.getElementById('gameDashboard').classList.remove('hidden');
+            const totalAssetsValue = useMemo(() => assets.reduce((sum, a) => sum + a.currentValue, 0), [assets]);
+            const totalDebt = useMemo(() => assets.reduce((sum, a) => sum + a.debt, 0), [assets]);
+            const monthlyMortgage = useMemo(() => assets.reduce((sum, a) => sum + a.installment, 0), [assets]);
+            const netWorth = player.cash + totalAssetsValue - totalDebt;
+            const dsr = player.salary > 0 ? (monthlyMortgage / player.salary) : 0;
             
-            log(`Game Started as ${arch.name}. Welcome to Year 2000.`);
-            updateUI();
-        }
+            // --- ACTIONS ---
 
-        // --- CORE LOGIC ---
-
-        function updatePrices() {
-            const event = timeline[state.year];
-            // Base Calculation: Sqm * Price * Multiplier (simplified accumulation logic for prototype)
-            // In a full game, we'd track cumulative growth. For MVP, we simulate price based on Year 2000 base * cumulative factors logic
-            
-            // Hack for MVP: Calculate cumulative multiplier from 2000 to current year
-            let mult1 = 1, mult2 = 1, mult3 = 1;
-            for (let y = 2000; y <= state.year; y++) {
-                if (timeline[y]) {
-                    mult1 *= timeline[y].multT1;
-                    mult2 *= timeline[y].multT2;
-                    mult3 *= timeline[y].multT3;
-                }
-            }
-
-            state.currentPrices[1] = Math.round(propertyTypes[1].basePrice * propertyTypes[1].sqm * mult1);
-            state.currentPrices[2] = Math.round(propertyTypes[2].basePrice * propertyTypes[2].sqm * mult2);
-            state.currentPrices[3] = Math.round(propertyTypes[3].basePrice * propertyTypes[3].sqm * mult3);
-        }
-
-        function nextYear() {
-            if (state.year >= 2025) {
-                alert("Game Over! Final Net Worth: " + state.netWorth.toLocaleString());
-                return;
-            }
-
-            // 1. Income & Savings
-            const annualSalary = state.salary * 12;
-            const savings = annualSalary * state.archetype.saving;
-            state.cash += savings;
-            
-            // 2. Salary Growth [Source: Archetype Growth Patterns]
-            state.salary = Math.round(state.salary * (1 + state.archetype.growth));
-
-            // 3. Portfolio Updates (Rent & Valuation)
-            let rentalIncome = 0;
-            state.portfolio.forEach(prop => {
-                // Update Value
-                const typeData = propertyTypes[prop.type];
-                // Recalculate current price based on new year
-                // (Done in updatePrices next, but let's estimate gain)
-            });
-
-            // 4. Advance Year
-            state.year++;
-            const event = timeline[state.year];
-            
-            // 5. Update Market
-            updatePrices();
-
-            // 6. Recalculate Portfolio Value & Add Rent
-            state.portfolio.forEach(prop => {
-                prop.value = state.currentPrices[prop.type]; // Mark to market
-                // Simple Rent: 5% Yield roughly
-                rentalIncome += (prop.value * 0.05); 
-            });
-            state.cash += rentalIncome;
-
-            // Log
-            log(`Year ${state.year}: ${event.event}. Savings +${parseInt(savings).toLocaleString()}, Rent +${parseInt(rentalIncome).toLocaleString()}`);
-            
-            updateUI();
-        }
-
-        function buyProperty(type) {
-            const price = state.currentPrices[type];
-            const downPayment = price * 0.20; // 20% Down [Source: Page 5]
-
-            if (state.cash < downPayment) {
-                alert("Not enough cash for down payment! Need " + downPayment.toLocaleString());
-                return;
-            }
-
-            // Deduct Cash
-            state.cash -= downPayment;
-
-            // Add to Portfolio (Loan = 80%)
-            state.portfolio.push({
-                type: type,
-                yearBought: state.year,
-                buyPrice: price,
-                value: price,
-                loan: price * 0.80
-            });
-
-            log(`Purchased Type ${type} condo for ${price.toLocaleString()}. Paid down ${downPayment.toLocaleString()}.`);
-            updateUI();
-        }
-
-        function calculateNetWorth() {
-            let assets = state.cash;
-            let liabilities = 0;
-            state.portfolio.forEach(p => {
-                assets += p.value;
-                liabilities += p.loan; // Simple loan model (no amortization for MVP)
-            });
-            return assets - liabilities;
-        }
-
-        // --- UI UPDATES ---
-        function updateUI() {
-            // Stats
-            document.getElementById('yearDisplay').innerText = state.year;
-            document.getElementById('nextYearDisplay').innerText = state.year + 1;
-            document.getElementById('cashDisplay').innerText = Math.round(state.cash).toLocaleString();
-            document.getElementById('salaryDisplay').innerText = state.salary.toLocaleString();
-            document.getElementById('ageDisplay').innerText = 22 + (state.year - 2000);
-            
-            state.netWorth = calculateNetWorth();
-            document.getElementById('netWorthDisplay').innerText = Math.round(state.netWorth).toLocaleString();
-
-            // Event
-            const event = timeline[state.year];
-            document.getElementById('eventDisplay').innerText = event.event;
-            const sentiment = event.severity >= 4 ? "Euphoric 🔥" : event.severity == 3 ? "Volatile ⚠️" : event.severity >= 5 ? "CRASH 📉" : "Neutral 😐";
-            document.getElementById('marketSentiment').innerText = `Sentiment: ${sentiment}`;
-
-            // Prices
-            document.getElementById('priceT1').innerText = state.currentPrices[1].toLocaleString();
-            document.getElementById('priceT2').innerText = state.currentPrices[2].toLocaleString();
-            document.getElementById('priceT3').innerText = state.currentPrices[3].toLocaleString();
-
-            // Portfolio
-            const pfList = document.getElementById('portfolioList');
-            pfList.innerHTML = "";
-            if (state.portfolio.length === 0) {
-                pfList.innerHTML = '<p class="text-gray-400 text-center italic mt-10">No properties owned yet.</p>';
-            } else {
-                state.portfolio.forEach((p, index) => {
-                    const gain = p.value - p.buyPrice;
-                    const gainPercent = ((gain / p.buyPrice) * 100).toFixed(1);
-                    const color = gain >= 0 ? "text-green-600" : "text-red-600";
-                    
-                    pfList.innerHTML += `
-                        <div class="border p-3 rounded flex justify-between items-center bg-gray-50">
-                            <div>
-                                <span class="font-bold text-gray-700">Type ${p.type}</span>
-                                <div class="text-xs text-gray-500">Bought: ${p.yearBought} @ ${(p.buyPrice/1000).toFixed(1)}k</div>
-                            </div>
-                            <div class="text-right">
-                                <div class="font-bold">${p.value.toLocaleString()}</div>
-                                <div class="text-xs ${color}">${gain > 0 ? '+' : ''}${gainPercent}%</div>
-                            </div>
-                        </div>
-                    `;
+            const startGame = (archKey) => {
+                const arch = ARCHETYPES[archKey];
+                setPlayer({
+                    ...arch,
+                    cash: (arch.salary * 6) + (arch.startCash || 0), // 6 months savings + bonus
+                    stress: 20,
+                    creditScore: 700,
+                    careerXp: 0
                 });
+                setGameState('PLAYING');
+                addLog(2000, `Started journey as ${arch.name}`);
+            };
+
+            const addLog = (y, msg, type='info') => {
+                setLogs(prev => [{year: y, msg, type}, ...prev]);
+            };
+
+            const calculatePrice = (type) => {
+                // Simulate market price based on accumulated growth from 2000 to current year
+                let multiplier = 1;
+                for(let y=2000; y<=year; y++) {
+                    const evt = TIMELINE[y] || { typeMod: {1:1.02, 2:1.03, 3:1.04} };
+                    multiplier *= evt.typeMod[type];
+                }
+                return Math.round(PROPERTIES[type].basePrice * multiplier);
+            };
+
+            const buyProperty = (typeId) => {
+                const prop = PROPERTIES[typeId];
+                const price = calculatePrice(typeId);
+                const downPayment = price * 0.20; // 20% down
+                const loan = price * 0.80;
+                
+                // --- FINANCIAL CHECKS [cite: 194-196] ---
+                if (player.cash < downPayment) {
+                    alert("เงินสดไม่พอจ่ายดาวน์!");
+                    return;
+                }
+                
+                // DSR Check (Debt Service Ratio)
+                // Installment calculation: Loan * Rate / 12 (Simplified Interest Only for game flow) + Principal
+                const rate = currentEvent.rate / 100;
+                const installment = (loan * rate / 12) + (loan / (30 * 12)); // 30 Years
+                
+                if ((monthlyMortgage + installment) / player.salary > player.dti) {
+                    alert(`กู้ไม่ผ่าน! DSR เกิน ${player.dti*100}% (ธนาคารมองว่าคุณผ่อนไม่ไหว)`);
+                    return;
+                }
+
+                if (player.creditScore < 600) {
+                    alert("กู้ไม่ผ่าน! เครดิตสกอร์ต่ำเกินไป");
+                    return;
+                }
+
+                // Execution
+                setPlayer(prev => ({ ...prev, cash: prev.cash - downPayment }));
+                setAssets(prev => [...prev, {
+                    id: Date.now(),
+                    type: typeId,
+                    name: prop.name,
+                    purchasePrice: price,
+                    currentValue: price,
+                    debt: loan,
+                    installment: installment,
+                    isRented: true // Assume rented initially
+                }]);
+
+                addLog(year, `Bought ${prop.name} for ฿${(price/1e6).toFixed(2)}M. Loan: ฿${(loan/1e6).toFixed(2)}M`, 'success');
+                setModal(null);
+            };
+
+            const nextYear = () => {
+                // 1. Process Career & Income
+                // Base salary growth + Bonus checks
+                let growth = player.growth;
+                if (currentEvent.severity >= 5 && currentEvent.sentiment < 30) growth = -0.05; // Pay cut in crisis
+                
+                const annualSalary = player.salary * 12;
+                const bonus = (Math.random() < 0.3) ? player.salary * 2 : 0; // Random bonus
+                const livingExpenses = annualSalary * 0.5; // Fixed 50% lifestyle cost
+
+                let newCash = player.cash + annualSalary + bonus - livingExpenses;
+                let newStress = player.stress;
+
+                // 2. Process Assets (Rent, Mortgage, Price Update)
+                const nextYearVal = year + 1;
+                if (nextYearVal > 2025) {
+                    setGameState('END');
+                    return;
+                }
+                const nextEvent = TIMELINE[nextYearVal] || { typeMod: {1:1.02, 2:1.03, 3:1.04} };
+
+                const updatedAssets = assets.map(asset => {
+                    // Mortgage Payment
+                    newCash -= (asset.installment * 12);
+                    
+                    // Rent Calculation (Vacancy Risk based on Economy)
+                    let isRented = true;
+                    if (currentEvent.sentiment < 40 && Math.random() > 0.7) isRented = false; // Crisis vacancy
+                    if (asset.type === 3 && currentEvent.event.includes("COVID")) isRented = false; // Luxury empty in Covid
+                    
+                    if (isRented) {
+                        const rent = PROPERTIES[asset.type].rent * 12; // Simplified annual rent
+                        newCash += rent;
+                    } else {
+                        addLog(year, `Vacancy alert! ${asset.name} has no tenant.`, 'error');
+                        newStress += 5;
+                    }
+
+                    // Price Update for Next Year
+                    const typeMult = nextEvent.typeMod[asset.type];
+                    const newValue = asset.currentValue * typeMult;
+
+                    return { ...asset, currentValue: newValue, isRented };
+                });
+
+                // 3. Life Events Logic
+                if (newStress > 80) {
+                    addLog(year, "Health Crisis! Hospital bill -100k due to stress.", 'error');
+                    newCash -= 100000;
+                    newStress = 40; // Reset after crisis
+                }
+
+                // 4. Update State
+                setPlayer(prev => ({
+                    ...prev,
+                    salary: Math.floor(prev.salary * (1 + growth)),
+                    cash: newCash,
+                    stress: Math.max(0, Math.min(100, newStress - 5)), // Relax a bit each year
+                    careerXp: prev.careerXp + 1,
+                    creditScore: Math.min(850, prev.creditScore + 5) // Good payment history
+                }));
+                setAssets(updatedAssets);
+                setYear(nextYearVal);
+                
+                // 5. Trigger Modal if Major Event
+                if (TIMELINE[nextYearVal] && TIMELINE[nextYearVal].severity >= 4) {
+                    setModal('EVENT_ALERT');
+                }
+            };
+
+            // --- RENDER HELPERS ---
+            const formatMoney = (n) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+
+            if (gameState === 'SETUP') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 to-slate-800">
+                        <div className="max-w-5xl w-full">
+                            <h1 className="text-4xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">HUAI KHWANG: INVESTOR ORIGINS</h1>
+                            <p className="text-center text-gray-400 mb-8 font-mono">Select your starting path (2000-2025)</p>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {Object.values(ARCHETYPES).map(arch => (
+                                    <button key={arch.id} onClick={() => startGame(arch.id)} 
+                                        className="glass p-6 rounded-xl hover:border-blue-500 transition text-left group relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                                            <svg width="100" height="100" fill="currentColor"><circle cx="50" cy="50" r="40"/></svg>
+                                        </div>
+                                        <h3 className="text-xl font-bold text-blue-300 mb-1">{arch.name}</h3>
+                                        <p className="text-sm text-gray-500 mb-4 font-mono">Start Salary: ฿{arch.salary.toLocaleString()}</p>
+                                        <p className="text-gray-300 text-sm mb-4">{arch.desc}</p>
+                                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+                                            <span>Risk Tolerance: {arch.risk}/5</span>
+                                            <span>Savings Rate: {arch.saving*100}%</span>
+                                            <span>Start Capital: {arch.startCash ? formatMoney(arch.startCash) : '0'}</span>
+                                            <span>Max DTI: {arch.dti*100}%</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
             }
+
+            return (
+                <div className="min-h-screen p-4 md:p-6 max-w-[1600px] mx-auto flex flex-col gap-6">
+                    {/* TOP BAR: STATUS */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        <div className="col-span-2 md:col-span-2 lg:col-span-2 glass p-4 rounded-xl flex items-center justify-between border-l-4 border-blue-500">
+                            <div>
+                                <span className="text-xs text-blue-400 font-bold tracking-widest uppercase mb-1 block">Timeline</span>
+                                <span className="text-4xl font-bold font-mono text-white">{year}</span>
+                            </div>
+                            <div className="text-right max-w-[200px]">
+                                <span className={`text-sm font-bold ${currentEvent.severity >= 4 ? 'text-green-400 animate-pulse' : currentEvent.severity === 5 ? 'text-red-500 animate-pulse' : 'text-gray-300'}`}>
+                                    {currentEvent.event}
+                                </span>
+                                <div className="w-full bg-gray-700 h-1 mt-2 rounded-full">
+                                    <div className="bg-blue-500 h-1 rounded-full" style={{width: `${currentEvent.sentiment}%`}}></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <StatCard label="Cash" value={`฿${formatMoney(player.cash)}`} color="green" icon="💰" />
+                        <StatCard label="Net Worth" value={`฿${formatMoney(netWorth)}`} color="purple" icon="📈" />
+                        <StatCard label="M. Salary" value={`฿${formatMoney(player.salary)}`} subValue={`DSR: ${(dsr*100).toFixed(1)}%`} color="yellow" icon="💵" />
+                        
+                        <div className="glass p-4 rounded-xl">
+                            <ProgressBar label="Stress" value={player.stress} max={100} color={player.stress > 70 ? 'red' : 'blue'} />
+                            <ProgressBar label="Credit Score" value={player.creditScore} max={850} color={player.creditScore > 700 ? 'green' : 'yellow'} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full flex-grow">
+                        
+                        {/* LEFT: MARKET & ACTIONS */}
+                        <div className="lg:col-span-8 flex flex-col gap-6">
+                            
+                            {/* Market Dashboard */}
+                            <div className="glass p-6 rounded-xl">
+                                <div className="flex justify-between items-end mb-6">
+                                    <h2 className="text-xl font-bold text-gray-200 flex items-center gap-2">
+                                        🏢 Real Estate Market <span className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-400 font-mono">HUAI KHWANG DISTRICT</span>
+                                    </h2>
+                                    <div className="text-xs text-gray-400">Interest Rate: <span className="text-white font-bold">{currentEvent.rate}%</span></div>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {[1, 2, 3].map(type => {
+                                        const prop = PROPERTIES[type];
+                                        const price = calculatePrice(type);
+                                        const isAffordable = player.cash >= price * 0.2;
+                                        // Trend indicator
+                                        const prevPrice = price / currentEvent.typeMod[type];
+                                        const change = ((price - prevPrice)/prevPrice) * 100;
+                                        
+                                        return (
+                                            <div key={type} className="bg-slate-800/50 border border-slate-700 p-4 rounded-lg hover:border-blue-500 transition relative group">
+                                                <div className="absolute top-2 right-2 text-xs text-gray-500 font-mono">{prop.volatility} Vol</div>
+                                                <h3 className="font-bold text-blue-300 mb-1">{prop.name}</h3>
+                                                <p className="text-xs text-gray-400 mb-4 h-10">{prop.desc}</p>
+                                                
+                                                <div className="flex justify-between items-end mb-4">
+                                                    <div>
+                                                        <div className="text-xs text-gray-500">Market Price</div>
+                                                        <div className="text-xl font-mono font-bold">฿{(price/1e6).toFixed(2)}M</div>
+                                                    </div>
+                                                    <div className={`text-xs font-bold ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                        {change > 0 ? '▲' : '▼'} {Math.abs(change).toFixed(1)}%
+                                                    </div>
+                                                </div>
+
+                                                <button onClick={() => buyProperty(type)} disabled={!isAffordable}
+                                                    className={`w-full py-2 rounded font-bold text-sm transition ${isAffordable ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/50' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}>
+                                                    {isAffordable ? 'BUY (20% Down)' : 'INSUFFICIENT CASH'}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Portfolio Table */}
+                            <div className="glass p-6 rounded-xl flex-grow">
+                                <h2 className="text-xl font-bold text-gray-200 mb-4">📂 Asset Portfolio</h2>
+                                {assets.length === 0 ? (
+                                    <div className="h-32 flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-700 rounded-lg">
+                                        No assets acquired yet. Start investing!
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left text-gray-400">
+                                            <thead className="text-xs uppercase bg-slate-800/50 text-gray-300">
+                                                <tr>
+                                                    <th className="px-4 py-3">Property</th>
+                                                    <th className="px-4 py-3">Value</th>
+                                                    <th className="px-4 py-3">Debt</th>
+                                                    <th className="px-4 py-3">Equity</th>
+                                                    <th className="px-4 py-3">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {assets.map(asset => {
+                                                    const equity = asset.currentValue - asset.debt;
+                                                    const gain = asset.currentValue - asset.purchasePrice;
+                                                    return (
+                                                        <tr key={asset.id} className="border-b border-gray-700 hover:bg-slate-800/30">
+                                                            <td className="px-4 py-3 font-medium text-white">
+                                                                {asset.name}
+                                                                <div className="text-xs text-gray-500">Bought @ {(asset.purchasePrice/1e6).toFixed(2)}M</div>
+                                                            </td>
+                                                            <td className="px-4 py-3 font-mono text-white">
+                                                                {(asset.currentValue/1e6).toFixed(2)}M
+                                                                <span className={`ml-2 text-xs ${gain>=0 ? 'text-green-400':'text-red-400'}`}>
+                                                                    {gain>=0?'+':''}{((gain/asset.purchasePrice)*100).toFixed(0)}%
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-3 font-mono">{(asset.debt/1e6).toFixed(2)}M</td>
+                                                            <td className="px-4 py-3 font-mono text-blue-300">{(equity/1e6).toFixed(2)}M</td>
+                                                            <td className="px-4 py-3">
+                                                                <span className={`px-2 py-1 rounded text-xs font-bold ${asset.isRented ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
+                                                                    {asset.isRented ? 'RENTED' : 'VACANT'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* RIGHT: LOGS & CONTROLS */}
+                        <div className="lg:col-span-4 flex flex-col gap-6">
+                            
+                            {/* Action Control */}
+                            <div className="glass p-6 rounded-xl text-center">
+                                <button onClick={nextYear} className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold text-xl py-4 rounded-xl shadow-lg shadow-green-900/50 transition transform active:scale-95 flex items-center justify-center gap-2">
+                                    <span>END YEAR {year}</span>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                                </button>
+                                <p className="text-xs text-gray-500 mt-3">Proceed to {year+1}. Events will trigger automatically.</p>
+                            </div>
+
+                            {/* Logs Terminal */}
+                            <div className="glass p-4 rounded-xl flex-grow flex flex-col h-[500px]">
+                                <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-3 border-b border-gray-700 pb-2">System Logs</h3>
+                                <div className="flex-grow overflow-y-auto space-y-2 font-mono text-xs pr-2">
+                                    {logs.map((log, i) => (
+                                        <div key={i} className={`p-2 rounded border-l-2 ${log.type === 'error' ? 'border-red-500 bg-red-900/10 text-red-300' : log.type === 'success' ? 'border-green-500 bg-green-900/10 text-green-300' : 'border-blue-500 bg-blue-900/10 text-gray-300'}`}>
+                                            <span className="opacity-50">[{log.year}]</span> {log.msg}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    {/* EVENT MODAL */}
+                    {modal === 'EVENT_ALERT' && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm fade-in">
+                            <div className="glass bg-slate-900 p-8 rounded-2xl max-w-lg w-full text-center border border-blue-500 shadow-2xl shadow-blue-500/20">
+                                <div className="text-4xl mb-4">📢</div>
+                                <h2 className="text-2xl font-bold text-white mb-2">MAJOR EVENT DETECTED</h2>
+                                <p className="text-xl text-blue-300 font-bold mb-4">{TIMELINE[year].event}</p>
+                                <div className="text-left bg-slate-800 p-4 rounded-lg text-sm text-gray-300 mb-6 space-y-2">
+                                    <p>• Market Sentiment: <span className={TIMELINE[year].sentiment < 40 ? 'text-red-400' : 'text-green-400'}>{TIMELINE[year].sentiment}/100</span></p>
+                                    <p>• Interest Rate: {TIMELINE[year].rate}%</p>
+                                    <p>• Impact: {TIMELINE[year].severity >= 4 ? "High Volatility Expected" : "Moderate Impact"}</p>
+                                </div>
+                                <button onClick={() => setModal(null)} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-lg font-bold w-full transition">
+                                    ACKNOWLEDGE
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
         }
 
-        function log(msg) {
-            const logEl = document.getElementById('gameLog');
-            logEl.innerHTML = `<div>> ${msg}</div>` + logEl.innerHTML;
-        }
-
-        // Start
-        init();
-
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Game />);
     </script>
 </body>
 </html>
