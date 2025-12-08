@@ -3,334 +3,373 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huai Khwang Simulation: Set & Run</title>
+    <title>Huai Khwang Real Estate Simulator (2000-2025)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Sarabun', sans-serif; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
+        .stat-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .event-log { height: 150px; overflow-y: auto; background: #1f2937; color: #10b981; font-family: monospace; padding: 10px; border-radius: 4px; }
+        .positive { color: green; }
+        .negative { color: red; }
     </style>
 </head>
-<body class="bg-slate-900 text-white">
-    <div id="root"></div>
+<body class="p-6">
 
-    <script type="text/babel">
-        const { useState, useMemo } = React;
+    <div id="setupScreen" class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-bold mb-2 text-blue-900">Real Estate Investment Simulator</h1>
+        <p class="text-gray-600 mb-6">Huai Khwang Edition (2000 - 2025)</p>
+        
+        <h2 class="text-xl font-semibold mb-4">Select Investor Archetype:</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="archetypeList">
+            </div>
+    </div>
 
-        // --- Data Reference (Based on your Document) ---
-        // Growth Rates for each asset type per year (Simplified from source)
-        const MARKET_DATA = {
-            2009: { t1: 0.08, t2: 0.08, t3: 0.10, event: "Golden Age Begins" },
-            2010: { t1: 0.07, t2: 0.09, t3: 0.12, event: "Post-Flood Boom" },
-            2011: { t1: 0.10, t2: 0.10, t3: 0.15, event: "First Chinese Wave" },
-            2012: { t1: 0.06, t2: 0.08, t3: 0.12, event: "First Car Policy" },
-            2013: { t1: 0.05, t2: 0.07, t3: 0.10, event: "Political Unrest" },
-            2014: { t1: 0.05, t2: 0.06, t3: 0.08, event: "Coup d'etat" },
-            2015: { t1: 0.02, t2: 0.05, t3: 0.06, event: "Supply Overload" },
-            2016: { t1: 0.00, t2: 0.04, t3: 0.05, event: "Mass Market Stalls" },
-            2017: { t1: -0.02, t2: 0.03, t3: 0.05, event: "Household Debt" },
-            2018: { t1: -0.04, t2: 0.01, t3: 0.04, event: "LTV Measure" },
-            2019: { t1: -0.03, t2: 0.01, t3: 0.02, event: "Trade War" },
-            2020: { t1: -0.15, t2: -0.05, t3: -0.02, event: "COVID Crisis" },
-            2021: { t1: -0.05, t2: 0.02, t3: 0.20, event: "Luxury Anomaly" }, // High growth for Luxury
-            2022: { t1: -0.02, t2: 0.03, t3: 0.08, event: "Reopening" },
-            2023: { t1: -0.03, t2: 0.04, t3: 0.06, event: "Interest Hike" },
-            2024: { t1: 0.01, t2: 0.03, t3: 0.05, event: "K-Shape Recovery" }
-        };
+    <div id="gameDashboard" class="hidden max-w-6xl mx-auto">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div class="stat-card border-l-4 border-blue-500">
+                <div class="text-gray-500 text-sm">Year</div>
+                <div class="text-2xl font-bold" id="yearDisplay">2000</div>
+            </div>
+            <div class="stat-card border-l-4 border-green-500">
+                <div class="text-gray-500 text-sm">Cash on Hand</div>
+                <div class="text-2xl font-bold text-green-600" id="cashDisplay">0</div>
+            </div>
+            <div class="stat-card border-l-4 border-purple-500">
+                <div class="text-gray-500 text-sm">Net Worth</div>
+                <div class="text-2xl font-bold text-purple-600" id="netWorthDisplay">0</div>
+            </div>
+            <div class="stat-card border-l-4 border-yellow-500">
+                <div class="text-gray-500 text-sm">Monthly Salary</div>
+                <div class="text-2xl font-bold" id="salaryDisplay">0</div>
+            </div>
+             <div class="stat-card border-l-4 border-red-500">
+                <div class="text-gray-500 text-sm">Age</div>
+                <div class="text-2xl font-bold" id="ageDisplay">22</div>
+            </div>
+        </div>
 
-        const ASSETS = {
-            t1: { name: "Entry Level (Mass)", price: 1.5, yield: 0.06 },   // 1.5M
-            t2: { name: "Real Demand (Mid)", price: 3.0, yield: 0.045 }, // 3.0M
-            t3: { name: "Prime Luxury", price: 6.0, yield: 0.035 }       // 6.0M
-        };
-
-        function Simulation() {
-            // --- 1. User Inputs (Strategy) ---
-            const [career, setCareer] = useState('manager'); // starter, manager, exec
-            const [lifestyle, setLifestyle] = useState('saver'); // saver, balanced, spender
-            const [strategy, setStrategy] = useState('balanced'); // safe, balanced, aggressive
-            const [hasRun, setHasRun] = useState(false);
-            const [results, setResults] = useState([]);
-
-            // --- 2. Simulation Logic ---
-            const runSimulation = () => {
-                let currentYear = 2008;
-                // Config based on inputs
-                let salary = career === 'starter' ? 18000 : career === 'manager' ? 35000 : 60000;
-                let expenseRatio = lifestyle === 'saver' ? 0.4 : lifestyle === 'balanced' ? 0.6 : 0.8;
-                
-                let cash = 100000; // Start cash
-                let portfolio = []; // List of assets { type, value, boughtPrice }
-                let history = [];
-
-                for (let year = 2009; year <= 2024; year++) {
-                    // A. Career Growth (Auto)
-                    salary = salary * 1.10; // +10% per year
-                    if ((year - 2009) % 5 === 0) salary *= 1.20; // Promotion every 5 years
-
-                    // B. Cash Flow
-                    let yearlyIncome = salary * 12;
-                    let yearlyExpense = yearlyIncome * expenseRatio;
-                    
-                    // Rental Income
-                    let rentalIncome = 0;
-                    portfolio.forEach(asset => {
-                        let actualYield = ASSETS[asset.type].yield;
-                        // Crisis Logic: Type 1 yields drop in crisis
-                        if (year === 2020 || year === 2021) {
-                            if (asset.type === 't1') actualYield = 0; 
-                            if (asset.type === 't3') actualYield *= 0.8;
-                        }
-                        rentalIncome += asset.value * actualYield;
-                    });
-
-                    cash += (yearlyIncome - yearlyExpense) + rentalIncome;
-
-                    // C. Market Updates (Asset Growth)
-                    const market = MARKET_DATA[year];
-                    portfolio.forEach(asset => {
-                        asset.value *= (1 + market[asset.type]);
-                    });
-
-                    // D. Investment Decision (The Bot Logic)
-                    // Strategy: Buy whenever cash > Down Payment (20%) + Buffer
-                    let targetAsset = null;
-                    if (strategy === 'safe') targetAsset = 't2'; // Buy Mid-tier
-                    else if (strategy === 'aggressive') targetAsset = 't3'; // Aim for Luxury
-                    else targetAsset = (cash > 2000000) ? 't2' : 't1'; // Mixed
-
-                    // Price calculation (Inflation adjusted)
-                    // Simplified: Asset prices grow same as market roughly
-                    // Need to track "Market Price" of new assets
-                    let marketPriceT1 = ASSETS.t1.price * 1000000;
-                    let marketPriceT2 = ASSETS.t2.price * 1000000;
-                    let marketPriceT3 = ASSETS.t3.price * 1000000;
-                    
-                    // Re-calculate market prices based on history
-                    for(let y=2009; y<=year; y++) {
-                        marketPriceT1 *= (1 + MARKET_DATA[y].t1);
-                        marketPriceT2 *= (1 + MARKET_DATA[y].t2);
-                        marketPriceT3 *= (1 + MARKET_DATA[y].t3);
-                    }
-
-                    let buyTarget = null;
-                    let buyPrice = 0;
-
-                    if (strategy === 'safe' && cash > marketPriceT2 * 0.3) { buyTarget = 't2'; buyPrice = marketPriceT2; }
-                    else if (strategy === 'aggressive' && cash > marketPriceT3 * 0.3) { buyTarget = 't3'; buyPrice = marketPriceT3; }
-                    else if (strategy === 'balanced') {
-                        if (cash > marketPriceT2 * 0.3) { buyTarget = 't2'; buyPrice = marketPriceT2; }
-                        else if (cash > marketPriceT1 * 0.4 && portfolio.length < 2) { buyTarget = 't1'; buyPrice = marketPriceT1; } // Limit junk assets
-                    }
-
-                    // Execute Buy (Assume 80% Loan)
-                    if (buyTarget) {
-                        // Check if DSR is okay (Simplified: Debt payment < 40% salary)
-                        let monthlyInstallment = (buyPrice * 0.8 * 0.006); // Rough installment
-                        let currentDebt = portfolio.reduce((sum, p) => sum + (p.boughtPrice * 0.8 * 0.006), 0);
-                        
-                        if ((currentDebt + monthlyInstallment) < salary * 0.5) {
-                            let downPayment = buyPrice * 0.2;
-                            cash -= downPayment;
-                            portfolio.push({
-                                type: buyTarget,
-                                value: buyPrice,
-                                boughtPrice: buyPrice,
-                                yearBought: year
-                            });
-                        }
-                    }
-
-                    // Store History
-                    let portfolioValue = portfolio.reduce((sum, p) => sum + p.value, 0);
-                    let loanBalance = portfolio.reduce((sum, p) => sum + (p.boughtPrice * 0.8), 0); // Simplified: No principal reduction
-                    let netWorth = cash + portfolioValue - loanBalance;
-
-                    history.push({
-                        year,
-                        salary,
-                        netWorth,
-                        assetsCount: portfolio.length,
-                        event: market.event
-                    });
-                }
-                
-                setResults(history);
-                setHasRun(true);
-            };
-
-            // --- 3. Visualization (Simple SVG Chart) ---
-            const Chart = ({ data }) => {
-                if (!data || data.length === 0) return null;
-                const maxVal = Math.max(...data.map(d => d.netWorth));
-                const minVal = Math.min(...data.map(d => d.netWorth));
-                const height = 200;
-                const width = 100; // percentage
-                
-                const points = data.map((d, i) => {
-                    const x = (i / (data.length - 1)) * 100;
-                    const y = 100 - ((d.netWorth - minVal) / (maxVal - minVal || 1)) * 100;
-                    return `${x},${y}`;
-                }).join(" ");
-
-                return (
-                    <div className="w-full h-48 bg-slate-800 rounded-lg relative mt-4 p-2 border border-slate-700">
-                        <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            {/* Grid lines */}
-                            <line x1="0" y1="25" x2="100" y2="25" stroke="#334155" strokeWidth="0.5" />
-                            <line x1="0" y1="50" x2="100" y2="50" stroke="#334155" strokeWidth="0.5" />
-                            <line x1="0" y1="75" x2="100" y2="75" stroke="#334155" strokeWidth="0.5" />
-                            
-                            {/* The Graph Line */}
-                            <polyline points={points} fill="none" stroke="#3b82f6" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-                        </svg>
-                        
-                        {/* Labels for Key Events */}
-                        {data.map((d, i) => {
-                            if (d.year === 2020 || d.year === 2015 || d.year === 2024) {
-                                return (
-                                    <div key={i} className="absolute text-[10px] text-gray-400" 
-                                         style={{ left: `${(i / (data.length - 1)) * 100}%`, bottom: '-20px', transform: 'translateX(-50%)' }}>
-                                        {d.year}
-                                    </div>
-                                )
-                            }
-                            return null;
-                        })}
-                    </div>
-                );
-            };
-
-            return (
-                <div className="min-h-screen p-6 max-w-4xl mx-auto">
-                    <h1 className="text-3xl font-bold mb-2 text-blue-400">Huai Khwang Auto-Sim 🏙️</h1>
-                    <p className="text-gray-400 mb-6">วางแผนครั้งเดียว แล้วดูผลลัพธ์ 16 ปี (2009-2024)</p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        {/* Input Section */}
-                        <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                            <h3 className="text-lg font-bold mb-4 text-white">1. เลือกเส้นทางอาชีพ</h3>
-                            <div className="space-y-2">
-                                {[
-                                    {id: 'starter', label: 'General Staff', sub: 'Start 18k'},
-                                    {id: 'manager', label: 'Management Track', sub: 'Start 35k'},
-                                    {id: 'exec', label: 'Fast Track / Tech', sub: 'Start 60k'}
-                                ].map(c => (
-                                    <div key={c.id} 
-                                        onClick={() => setCareer(c.id)}
-                                        className={`p-3 rounded cursor-pointer transition ${career === c.id ? 'bg-blue-600 border border-blue-400' : 'bg-slate-700 hover:bg-slate-600'}`}>
-                                        <div className="font-bold">{c.label}</div>
-                                        <div className="text-xs opacity-75">{c.sub} (+10%/ปี)</div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                            <h3 className="text-lg font-bold mb-4 text-white">2. นิสัยการใช้เงิน</h3>
-                            <div className="space-y-2">
-                                {[
-                                    {id: 'saver', label: 'สายประหยัด', sub: 'ใช้ 40% เก็บ 60%'},
-                                    {id: 'balanced', label: 'สายสมดุล (Balance)', sub: 'ใช้ 60% เก็บ 40%'},
-                                    {id: 'spender', label: 'สายเปย์ (YOLO)', sub: 'ใช้ 80% เก็บ 20%'}
-                                ].map(l => (
-                                    <div key={l.id} 
-                                        onClick={() => setLifestyle(l.id)}
-                                        className={`p-3 rounded cursor-pointer transition ${lifestyle === l.id ? 'bg-green-600 border border-green-400' : 'bg-slate-700 hover:bg-slate-600'}`}>
-                                        <div className="font-bold">{l.label}</div>
-                                        <div className="text-xs opacity-75">{l.sub}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                            <h3 className="text-lg font-bold mb-4 text-white">3. กลยุทธ์ลงทุน</h3>
-                            <div className="space-y-2">
-                                {[
-                                    {id: 'balanced', label: 'Mixed Strategy', sub: 'ซื้อตามกำลังทรัพย์'},
-                                    {id: 'safe', label: 'Quality Focus', sub: 'เก็บเงินรอซื้อ Type 2 เท่านั้น'},
-                                    {id: 'aggressive', label: 'Sniper (Luxury)', sub: 'เล็ง Type 3 (ของหายาก)'}
-                                ].map(s => (
-                                    <div key={s.id} 
-                                        onClick={() => setStrategy(s.id)}
-                                        className={`p-3 rounded cursor-pointer transition ${strategy === s.id ? 'bg-purple-600 border border-purple-400' : 'bg-slate-700 hover:bg-slate-600'}`}>
-                                        <div className="font-bold">{s.label}</div>
-                                        <div className="text-xs opacity-75">{s.sub}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    <button 
-                        onClick={runSimulation}
-                        className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-bold text-xl py-4 rounded-xl shadow-lg mb-8 transition transform active:scale-95"
-                    >
-                        🚀 Run Simulation (2008-2024)
-                    </button>
-
-                    {/* Results Section */}
-                    {hasRun && (
-                        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in">
-                            <div className="flex justify-between items-end mb-4">
-                                <div>
-                                    <h2 className="text-2xl font-bold">ผลลัพธ์ปี 2024</h2>
-                                    <p className="text-gray-400">ทรัพย์สินสุทธิ (Net Worth)</p>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-4xl font-bold text-green-400">
-                                        {(results[results.length-1].netWorth / 1000000).toFixed(2)}M
-                                    </div>
-                                    <div className="text-sm text-gray-400">
-                                        เงินเดือนจบที่: {(results[results.length-1].salary).toLocaleString()}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-4 mb-6">
-                                <div className="bg-slate-900 p-3 rounded text-center">
-                                    <div className="text-xs text-gray-400">จำนวนทรัพย์สิน</div>
-                                    <div className="text-xl font-bold">{results[results.length-1].assetsCount} ยูนิต</div>
-                                </div>
-                                <div className="bg-slate-900 p-3 rounded text-center">
-                                    <div className="text-xs text-gray-400">ผ่านวิกฤต COVID</div>
-                                    <div className={`text-xl font-bold ${results.find(r => r.year === 2020).netWorth > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {results.find(r => r.year === 2020).netWorth > 0 ? 'รอด ✅' : 'ล้มละลาย ❌'}
-                                    </div>
-                                </div>
-                                <div className="bg-slate-900 p-3 rounded text-center">
-                                    <div className="text-xs text-gray-400">Performance</div>
-                                    <div className="text-xl font-bold text-blue-400">
-                                        {results[results.length-1].netWorth > 10000000 ? 'Wealthy 🏆' : 'Average 😐'}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <h3 className="font-bold text-gray-300">กราฟการเติบโตของความมั่งคั่ง</h3>
-                            <Chart data={results} />
-                            
-                            {/* Analysis Text */}
-                            <div className="mt-6 p-4 bg-slate-900/50 rounded border-l-4 border-yellow-500 text-sm space-y-2">
-                                <p className="font-bold text-yellow-400">💡 บทวิเคราะห์จาก AI:</p>
-                                {strategy === 'aggressive' && results[results.length-1].netWorth > 15000000 ? (
-                                    <p>คุณเลือกถูก! การรอเก็บเงินซื้อ Luxury (Type 3) ทำให้พอร์ตคุณโตกระโดดในปี 2021 ซึ่งชนะตลาด Mass Market ขาดลอย</p>
-                                ) : strategy === 'balanced' && results[results.length-1].assetsCount > 3 ? (
-                                    <p>คุณสะสมทรัพย์สินได้เยอะ แต่ระวัง! การมี Type 1 เยอะเกินไปในช่วงหลังปี 2016 ทำให้มูลค่าพอร์ตไม่ไปไหนเพราะราคาตลาดนิ่ง</p>
-                                ) : (
-                                    <p>พอร์ตของคุณเติบโตตามมาตรฐาน การเลือก Asset Class มีผลมากในช่วงหลังโควิด (K-Shaped Recovery) ลองเปลี่ยนกลยุทธ์ดูไหม?</p>
-                                )}
-                            </div>
-                        </div>
-                    )}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-blue-900 text-white p-4 rounded-lg shadow">
+                    <h3 class="font-bold text-lg border-b border-blue-700 pb-2 mb-2">📢 Macro Event News</h3>
+                    <p id="eventDisplay" class="text-xl">Welcome to Year 2000. The market is baseline.</p>
+                    <p id="marketSentiment" class="text-sm text-blue-300 mt-2">Sentiment: Neutral</p>
                 </div>
-            );
+
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="font-bold text-xl mb-4 text-gray-800">🏢 Property Market (Huai Khwang)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="border p-4 rounded hover:shadow-md transition">
+                            <div class="bg-gray-200 text-xs font-bold px-2 py-1 rounded inline-block mb-2">Type 1: Entry Level</div>
+                            <h4 class="font-bold">Low-Rise / Deep Soi</h4>
+                            <p class="text-sm text-gray-500">25 sq.m. Studio</p>
+                            <div class="my-3">
+                                <span class="block text-2xl font-bold text-blue-600" id="priceT1">0</span>
+                                <span class="text-xs text-gray-500">THB/Unit</span>
+                            </div>
+                            <button onclick="buyProperty(1)" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">Buy (20% Down)</button>
+                        </div>
+                        <div class="border p-4 rounded hover:shadow-md transition border-blue-200 bg-blue-50">
+                            <div class="bg-blue-200 text-blue-800 text-xs font-bold px-2 py-1 rounded inline-block mb-2">Type 2: Real Demand</div>
+                            <h4 class="font-bold">Mid-Rise / Near MRT</h4>
+                            <p class="text-sm text-gray-500">35 sq.m. 1-Bed</p>
+                            <div class="my-3">
+                                <span class="block text-2xl font-bold text-blue-600" id="priceT2">0</span>
+                                <span class="text-xs text-gray-500">THB/Unit</span>
+                            </div>
+                            <button onclick="buyProperty(2)" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">Buy (20% Down)</button>
+                        </div>
+                        <div class="border p-4 rounded hover:shadow-md transition border-yellow-200 bg-yellow-50">
+                            <div class="bg-yellow-200 text-yellow-800 text-xs font-bold px-2 py-1 rounded inline-block mb-2">Type 3: Prime Luxury</div>
+                            <h4 class="font-bold">High-Rise / Main Road</h4>
+                            <p class="text-sm text-gray-500">50 sq.m. 2-Bed</p>
+                            <div class="my-3">
+                                <span class="block text-2xl font-bold text-blue-600" id="priceT3">0</span>
+                                <span class="text-xs text-gray-500">THB/Unit</span>
+                            </div>
+                            <button onclick="buyProperty(3)" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">Buy (20% Down)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <h3 class="font-bold mb-2">📜 Activity Log</h3>
+                    <div id="gameLog" class="event-log"></div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow text-center">
+                    <button onclick="nextYear()" class="w-full bg-green-600 text-white text-xl font-bold py-4 rounded-lg hover:bg-green-700 shadow-lg transform transition hover:scale-105">
+                        Start Next Year ▶
+                    </button>
+                    <p class="text-xs text-gray-400 mt-2">Proceeds to <span id="nextYearDisplay">2001</span></p>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow h-96 overflow-y-auto">
+                    <h3 class="font-bold text-lg mb-4 border-b pb-2">📂 My Portfolio</h3>
+                    <div id="portfolioList" class="space-y-3">
+                        <p class="text-gray-400 text-center italic mt-10">No properties owned yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. DATA: ARCHETYPES [Source: Page 2-4] ---
+        const archetypes = {
+            fresh_grad: { name: "Fresh Graduate", nameTH: "รุ่นใหม่หัวใจเกินร้อย", salary: 12000, growth: 0.08, saving: 0.15, risk: 4, desc: "Aggressive start, high growth." },
+            corporate: { name: "Corporate Climber", nameTH: "นักปีนบันไดองค์กร", salary: 25000, growth: 0.12, saving: 0.30, risk: 3, desc: "High savings, disciplined." },
+            power_couple: { name: "Power Couple", nameTH: "คู่ดับเบิ้ลตัวคูณ", salary: 50000, growth: 0.07, saving: 0.40, risk: 2, desc: "Double income, very safe." },
+            inheritance: { name: "Inheritance Accelerator", nameTH: "ลูกรวย Gen 2", salary: 30000, growth: 0.04, saving: 0.10, risk: 5, startCash: 2000000, desc: "Starts with 2M THB capital." },
+            fomo: { name: "FOMO Gambler", nameTH: "นักเสี่ยงโชคตามกระแส", salary: 18000, growth: 0.06, saving: 0.10, risk: 5, desc: "High risk, low savings." }
+        };
+
+        // --- 2. DATA: TIMELINE & EVENTS [Source: Page 14-22] ---
+        const timeline = {
+            2000: { event: "Baseline Year", severity: 0, multT1: 1.0, multT2: 1.0, multT3: 1.0 },
+            2001: { event: "Dot-com Hangover", severity: 2, multT1: 0.97, multT2: 0.97, multT3: 0.97 },
+            2002: { event: "Slow Recovery", severity: 1, multT1: 1.01, multT2: 1.01, multT3: 1.01 },
+            2003: { event: "SARS Shock", severity: 3, multT1: 0.95, multT2: 0.95, multT3: 0.88 },
+            2004: { event: "MRT Launch (Huai Khwang)", severity: 4, multT1: 1.08, multT2: 1.12, multT3: 1.18 },
+            2005: { event: "Golden Age Begins", severity: 5, multT1: 1.12, multT2: 1.15, multT3: 1.20 },
+            2006: { event: "Boom Continues", severity: 5, multT1: 1.12, multT2: 1.15, multT3: 1.20 },
+            2007: { event: "Peak Euphoria", severity: 5, multT1: 1.12, multT2: 1.15, multT3: 1.20 },
+            2008: { event: "Lehman Crisis", severity: 5, multT1: 0.82, multT2: 0.88, multT3: 0.75 },
+            2009: { event: "Stimulus Recovery", severity: 3, multT1: 1.05, multT2: 1.08, multT3: 0.95 },
+            2010: { event: "Rebuild Phase", severity: 2, multT1: 1.07, multT2: 1.09, multT3: 1.10 },
+            2011: { event: "Floods (Minimal Impact)", severity: 2, multT1: 1.07, multT2: 1.09, multT3: 1.10 },
+            2012: { event: "Steady Growth", severity: 2, multT1: 1.07, multT2: 1.09, multT3: 1.10 },
+            2013: { event: "Political Noise", severity: 2, multT1: 1.07, multT2: 1.09, multT3: 1.10 },
+            2014: { event: "Coup Shock", severity: 3, multT1: 0.95, multT2: 0.95, multT3: 0.95 },
+            2015: { event: "Chinese Boom Begins", severity: 4, multT1: 1.05, multT2: 1.08, multT3: 1.25 },
+            2016: { event: "Supply Overhang", severity: 2, multT1: 1.02, multT2: 1.05, multT3: 1.15 },
+            2017: { event: "Market Saturation", severity: 2, multT1: 1.02, multT2: 1.05, multT3: 1.15 },
+            2018: { event: "LTV Crackdown", severity: 3, multT1: 0.97, multT2: 1.01, multT3: 1.08 },
+            2019: { event: "Trade War / Sideways", severity: 2, multT1: 0.98, multT2: 1.01, multT3: 1.03 },
+            2020: { event: "COVID-19 Crash", severity: 5, multT1: 0.92, multT2: 0.95, multT3: 0.65 },
+            2021: { event: "K-Shaped Recovery", severity: 3, multT1: 0.97, multT2: 1.02, multT3: 1.40 },
+            2022: { event: "Rate Shock", severity: 4, multT1: 0.95, multT2: 0.98, multT3: 1.05 },
+            2023: { event: "China Reopening", severity: 2, multT1: 1.00, multT2: 1.02, multT3: 1.08 },
+            2024: { event: "Consolidation", severity: 1, multT1: 1.01, multT2: 1.03, multT3: 1.05 },
+            2025: { event: "Orange Line Opens", severity: 4, multT1: 1.05, multT2: 1.10, multT3: 1.15 }
+        };
+
+        // --- 3. DATA: PROPERTY BASE STATS [Source: Page 14] ---
+        const propertyTypes = {
+            1: { name: "Type 1 (Entry)", sqm: 25, basePrice: 40000, rent: 350 },
+            2: { name: "Type 2 (Real)", sqm: 35, basePrice: 55000, rent: 450 },
+            3: { name: "Type 3 (Luxury)", sqm: 50, basePrice: 80000, rent: 600 }
+        };
+
+        // --- GAME STATE ---
+        let state = {
+            year: 2000,
+            archetype: null,
+            salary: 0,
+            cash: 0,
+            netWorth: 0,
+            portfolio: [],
+            currentPrices: { 1: 0, 2: 0, 3: 0 }
+        };
+
+        // --- INITIALIZATION ---
+        function init() {
+            const list = document.getElementById('archetypeList');
+            for (const key in archetypes) {
+                const arch = archetypes[key];
+                list.innerHTML += `
+                    <div class="border p-4 rounded-lg hover:bg-blue-50 cursor-pointer transition" onclick="startGame('${key}')">
+                        <h3 class="font-bold text-lg">${arch.nameTH}</h3>
+                        <p class="text-sm text-gray-500">${arch.name}</p>
+                        <div class="mt-2 text-sm">
+                            <p>💰 Start Salary: ${arch.salary.toLocaleString()}</p>
+                            <p>📈 Risk: ${arch.risk}/5 | Saving: ${arch.saving*100}%</p>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<Simulation />);
+        function startGame(key) {
+            const arch = archetypes[key];
+            state.archetype = arch;
+            state.salary = arch.salary;
+            state.cash = (arch.salary * 12 * arch.saving) + (arch.startCash || 0); // Start with 1 year savings + bonus
+            state.year = 2000;
+            
+            // Set Base Prices
+            updatePrices();
+
+            // UI Switch
+            document.getElementById('setupScreen').classList.add('hidden');
+            document.getElementById('gameDashboard').classList.remove('hidden');
+            
+            log(`Game Started as ${arch.name}. Welcome to Year 2000.`);
+            updateUI();
+        }
+
+        // --- CORE LOGIC ---
+
+        function updatePrices() {
+            const event = timeline[state.year];
+            // Base Calculation: Sqm * Price * Multiplier (simplified accumulation logic for prototype)
+            // In a full game, we'd track cumulative growth. For MVP, we simulate price based on Year 2000 base * cumulative factors logic
+            
+            // Hack for MVP: Calculate cumulative multiplier from 2000 to current year
+            let mult1 = 1, mult2 = 1, mult3 = 1;
+            for (let y = 2000; y <= state.year; y++) {
+                if (timeline[y]) {
+                    mult1 *= timeline[y].multT1;
+                    mult2 *= timeline[y].multT2;
+                    mult3 *= timeline[y].multT3;
+                }
+            }
+
+            state.currentPrices[1] = Math.round(propertyTypes[1].basePrice * propertyTypes[1].sqm * mult1);
+            state.currentPrices[2] = Math.round(propertyTypes[2].basePrice * propertyTypes[2].sqm * mult2);
+            state.currentPrices[3] = Math.round(propertyTypes[3].basePrice * propertyTypes[3].sqm * mult3);
+        }
+
+        function nextYear() {
+            if (state.year >= 2025) {
+                alert("Game Over! Final Net Worth: " + state.netWorth.toLocaleString());
+                return;
+            }
+
+            // 1. Income & Savings
+            const annualSalary = state.salary * 12;
+            const savings = annualSalary * state.archetype.saving;
+            state.cash += savings;
+            
+            // 2. Salary Growth [Source: Archetype Growth Patterns]
+            state.salary = Math.round(state.salary * (1 + state.archetype.growth));
+
+            // 3. Portfolio Updates (Rent & Valuation)
+            let rentalIncome = 0;
+            state.portfolio.forEach(prop => {
+                // Update Value
+                const typeData = propertyTypes[prop.type];
+                // Recalculate current price based on new year
+                // (Done in updatePrices next, but let's estimate gain)
+            });
+
+            // 4. Advance Year
+            state.year++;
+            const event = timeline[state.year];
+            
+            // 5. Update Market
+            updatePrices();
+
+            // 6. Recalculate Portfolio Value & Add Rent
+            state.portfolio.forEach(prop => {
+                prop.value = state.currentPrices[prop.type]; // Mark to market
+                // Simple Rent: 5% Yield roughly
+                rentalIncome += (prop.value * 0.05); 
+            });
+            state.cash += rentalIncome;
+
+            // Log
+            log(`Year ${state.year}: ${event.event}. Savings +${parseInt(savings).toLocaleString()}, Rent +${parseInt(rentalIncome).toLocaleString()}`);
+            
+            updateUI();
+        }
+
+        function buyProperty(type) {
+            const price = state.currentPrices[type];
+            const downPayment = price * 0.20; // 20% Down [Source: Page 5]
+
+            if (state.cash < downPayment) {
+                alert("Not enough cash for down payment! Need " + downPayment.toLocaleString());
+                return;
+            }
+
+            // Deduct Cash
+            state.cash -= downPayment;
+
+            // Add to Portfolio (Loan = 80%)
+            state.portfolio.push({
+                type: type,
+                yearBought: state.year,
+                buyPrice: price,
+                value: price,
+                loan: price * 0.80
+            });
+
+            log(`Purchased Type ${type} condo for ${price.toLocaleString()}. Paid down ${downPayment.toLocaleString()}.`);
+            updateUI();
+        }
+
+        function calculateNetWorth() {
+            let assets = state.cash;
+            let liabilities = 0;
+            state.portfolio.forEach(p => {
+                assets += p.value;
+                liabilities += p.loan; // Simple loan model (no amortization for MVP)
+            });
+            return assets - liabilities;
+        }
+
+        // --- UI UPDATES ---
+        function updateUI() {
+            // Stats
+            document.getElementById('yearDisplay').innerText = state.year;
+            document.getElementById('nextYearDisplay').innerText = state.year + 1;
+            document.getElementById('cashDisplay').innerText = Math.round(state.cash).toLocaleString();
+            document.getElementById('salaryDisplay').innerText = state.salary.toLocaleString();
+            document.getElementById('ageDisplay').innerText = 22 + (state.year - 2000);
+            
+            state.netWorth = calculateNetWorth();
+            document.getElementById('netWorthDisplay').innerText = Math.round(state.netWorth).toLocaleString();
+
+            // Event
+            const event = timeline[state.year];
+            document.getElementById('eventDisplay').innerText = event.event;
+            const sentiment = event.severity >= 4 ? "Euphoric 🔥" : event.severity == 3 ? "Volatile ⚠️" : event.severity >= 5 ? "CRASH 📉" : "Neutral 😐";
+            document.getElementById('marketSentiment').innerText = `Sentiment: ${sentiment}`;
+
+            // Prices
+            document.getElementById('priceT1').innerText = state.currentPrices[1].toLocaleString();
+            document.getElementById('priceT2').innerText = state.currentPrices[2].toLocaleString();
+            document.getElementById('priceT3').innerText = state.currentPrices[3].toLocaleString();
+
+            // Portfolio
+            const pfList = document.getElementById('portfolioList');
+            pfList.innerHTML = "";
+            if (state.portfolio.length === 0) {
+                pfList.innerHTML = '<p class="text-gray-400 text-center italic mt-10">No properties owned yet.</p>';
+            } else {
+                state.portfolio.forEach((p, index) => {
+                    const gain = p.value - p.buyPrice;
+                    const gainPercent = ((gain / p.buyPrice) * 100).toFixed(1);
+                    const color = gain >= 0 ? "text-green-600" : "text-red-600";
+                    
+                    pfList.innerHTML += `
+                        <div class="border p-3 rounded flex justify-between items-center bg-gray-50">
+                            <div>
+                                <span class="font-bold text-gray-700">Type ${p.type}</span>
+                                <div class="text-xs text-gray-500">Bought: ${p.yearBought} @ ${(p.buyPrice/1000).toFixed(1)}k</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold">${p.value.toLocaleString()}</div>
+                                <div class="text-xs ${color}">${gain > 0 ? '+' : ''}${gainPercent}%</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function log(msg) {
+            const logEl = document.getElementById('gameLog');
+            logEl.innerHTML = `<div>> ${msg}</div>` + logEl.innerHTML;
+        }
+
+        // Start
+        init();
+
     </script>
 </body>
 </html>
