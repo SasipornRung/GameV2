@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huai Khwang Survivor: First Jobber</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        .progress-bar { transition: width 0.5s ease-in-out; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Config ---
+        const START_YEAR = 2015;
+        const START_SALARY = 18000;
+        const START_CASH = 20000; // เงินก้นถุงจากพ่อแม่
+
+        const HOUSING_OPTIONS = [
+            { id: 'cheap', name: "หอพักในซอยลึก", cost: 3500, stress: 5, energy: -5, desc: "วินมอไซค์ 20 บาท, ห้องพัดลม, เพื่อนบ้านเสียงดัง" },
+            { id: 'mid', name: "อพาร์ทเมนท์รัชดา", cost: 6500, stress: 0, energy: 0, desc: "แอร์เก่า, เดินไกลหน่อยแต่ปลอดภัย" },
+            { id: 'condo', name: "เช่าคอนโดติด MRT", cost: 12000, stress: -5, energy: 5, desc: "ชีวิตดีมีสระว่ายน้ำ แต่เงินเดือนแทบไม่เหลือ" }
+        ];
+
+        const CAREER_PATHS = {
+            JUNIOR: { title: "Junior Staff", baseSalary: 18000, reqXp: 0 },
+            SENIOR: { title: "Senior Specialist", baseSalary: 35000, reqXp: 100 },
+            MANAGER: { title: "Team Manager", baseSalary: 60000, reqXp: 300 },
+            FREELANCE: { title: "Digital Nomad", baseSalary: 45000, reqXp: 150, risk: true }, // รายได้ไม่แน่นอน
+            INVESTOR: { title: "Full-time Investor", baseSalary: 0, reqXp: 500 } // รายได้จาก Asset ล้วนๆ
+        };
+
+        function Game() {
+            // --- State ---
+            const [year, setYear] = useState(START_YEAR);
+            const [month, setMonth] = useState(1);
+            
+            // Player Stats
+            const [cash, setCash] = useState(START_CASH);
+            const [salary, setSalary] = useState(START_SALARY);
+            const [stress, setStress] = useState(20); // 0-100
+            const [energy, setEnergy] = useState(80); // 0-100 (Action Points)
+            const [xp, setXp] = useState(0); // Career Experience
+            const [network, setNetwork] = useState(0); // Social Connection
+            
+            // Assets & Liabilities
+            const [jobTitle, setJobTitle] = useState(CAREER_PATHS.JUNIOR.title);
+            const [housing, setHousing] = useState(HOUSING_OPTIONS[0]); // เริ่มต้นอยู่หอถูก
+            const [properties, setProperties] = useState([]);
+            const [debt, setDebt] = useState(0);
+
+            // Game Flow
+            const [logs, setLogs] = useState([]);
+            const [showEvent, setShowEvent] = useState(null);
+            const [gameOver, setGameOver] = useState(false);
+
+            // --- Helpers ---
+            const addLog = (msg, type = 'info') => {
+                setLogs(prev => [{msg, type, id: Date.now()}, ...prev].slice(0, 10));
+            };
+
+            const changeStat = (stat, amount) => {
+                if (stat === 'cash') setCash(prev => prev + amount);
+                if (stat === 'stress') setStress(prev => Math.max(0, Math.min(100, prev + amount)));
+                if (stat === 'energy') setEnergy(prev => Math.max(0, Math.min(100, prev + amount)));
+                if (stat === 'xp') setXp(prev => prev + amount);
+                if (stat === 'network') setNetwork(prev => prev + amount);
+            };
+
+            // --- Monthly Loop ---
+            const nextMonth = () => {
+                // 1. Income & Expenses
+                let income = salary;
+                // ถ้ามี Property ให้เช่า
+                const rentalIncome = properties.reduce((sum, p) => sum + (p.isRented ? p.rent : 0), 0);
+                income += rentalIncome;
+
+                let expenses = housing.cost + 6000; // ค่ากินอยู่พื้นฐาน 6000
+                const mortgage = properties.reduce((sum, p) => sum + p.installment, 0);
+                expenses += mortgage;
+                
+                // หักภาษี/ประกันสังคมแบบง่ายๆ (5%)
+                expenses += salary * 0.05;
+
+                const netFlow = income - expenses;
+                setCash(prev => prev + netFlow);
+
+                // 2. Passive Stat Changes
+                changeStat('stress', housing.stress); 
+                changeStat('energy', housing.energy);
+                changeStat('energy', 30); // ฟื้นพลังรายเดือน
+
+                // 3. Random Events
+                handleRandomEvents();
+
+                // 4. Time Progress
+                if (month === 12) {
+                    setMonth(1);
+                    setYear(prev => prev + 1);
+                    annualReview();
+                } else {
+                    setMonth(prev => prev + 1);
+                }
+
+                addLog(`เดือน ${month}/${year}: Cashflow ${netFlow > 0 ? '+' : ''}${netFlow.toLocaleString()}`, netFlow > 0 ? 'success' : 'error');
+                
+                // Check Game Over
+                if (cash < -50000) {
+                    setGameOver({ reason: "ล้มละลาย! (หนี้ท่วมหัว)", type: "lose" });
+                }
+                if (stress >= 100) {
+                    setGameOver({ reason: "Burnout Syndrome! (เครียดจนเข้าโรงพยาบาล)", type: "lose" });
+                }
+            };
+
+            const annualReview = () => {
+                // ขึ้นเงินเดือนตาม XP และ Performance
+                let raise = 0.03; // 3% ฐาน
+                if (xp > 50) raise += 0.02;
+                if (network > 50) raise += 0.02;
+                
+                const newSalary = Math.floor(salary * (1 + raise));
+                setSalary(newSalary);
+                addLog(`🎉 โบนัสสิ้นปี! เงินเดือนขึ้นเป็น ${newSalary.toLocaleString()}`, 'success');
+
+                // Unlock Career Paths
+                if (jobTitle === CAREER_PATHS.JUNIOR.title && xp > CAREER_PATHS.SENIOR.reqXp) {
+                    setShowEvent({
+                        title: "โอกาสเลื่อนตำแหน่ง!",
+                        desc: "ผลงานเข้าตาหัวหน้า คุณได้รับเสนอตำแหน่ง Senior",
+                        choices: [
+                            { text: "รับตำแหน่ง (เงินเดือนเพิ่ม, งานหนักขึ้น)", action: () => {
+                                setJobTitle(CAREER_PATHS.SENIOR.title);
+                                setSalary(CAREER_PATHS.SENIOR.baseSalary);
+                                changeStat('stress', 10);
+                            }}
+                        ]
+                    });
+                }
+            };
+
+            const handleRandomEvents = () => {
+                if (Math.random() < 0.15) { // 15% chance per month
+                    const events = [
+                        { title: "🤒 ป่วยกระทันหัน", desc: "อากาศเปลี่ยน เป็นไข้หวัดใหญ่", effect: () => { changeStat('cash', -2000); changeStat('stress', 10); } },
+                        { title: "💌 ซองงานแต่ง", desc: "เพื่อนสมัยมัธยมแต่งงาน ใส่ซองหน่อย", effect: () => { changeStat('cash', -1000); changeStat('network', 5); } },
+                        { title: "📱 โทรศัพท์พัง", desc: "ทำตกจอแตก ต้องซ่อมด่วน", effect: () => { changeStat('cash', -3000); changeStat('stress', 15); } },
+                        { title: "😫 รถไฟฟ้าเสีย", desc: "ไปทำงานสาย โดนหักเงิน/บ่น", effect: () => { changeStat('stress', 10); changeStat('energy', -10); } }
+                    ];
+                    const evt = events[Math.floor(Math.random() * events.length)];
+                    addLog(evt.title, 'warning');
+                    evt.effect();
+                }
+            };
+
+            // --- Player Actions ---
+            const performAction = (action) => {
+                if (energy < action.cost) {
+                    addLog("พลังงานไม่พอ! ต้องพักผ่อนบ้าง", "error");
+                    return;
+                }
+
+                changeStat('energy', -action.cost);
+                
+                if (action.type === 'WORK') {
+                    // OT หรือขยัน
+                    const money = 1000 + (xp * 5);
+                    changeStat('cash', money);
+                    changeStat('xp', 5);
+                    changeStat('stress', 10);
+                    addLog(`ทำโอที: +${money} บาท`, 'success');
+                } else if (action.type === 'REST') {
+                    changeStat('stress', -20);
+                    addLog("นอนดู Netflix ชิลๆ", 'info');
+                } else if (action.type === 'LEARN') {
+                    changeStat('xp', 15);
+                    changeStat('cash', -500); // ค่าคอร์ส/หนังสือ
+                    addLog("ลงคอร์สเรียน: XP เพิ่ม", 'info');
+                } else if (action.type === 'PARTY') {
+                    changeStat('stress', -15);
+                    changeStat('network', 10);
+                    changeStat('cash', -2000);
+                    addLog("ปาร์ตี้หมูกระทะ: ได้เพื่อนใหม่", 'warning');
+                }
+            };
+
+            // --- Render Logic ---
+            if (gameOver) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white p-4">
+                        <div className="bg-gray-800 p-8 rounded-lg max-w-md w-full text-center border-2 border-red-500">
+                            <h1 className="text-4xl mb-4">💀 GAME OVER</h1>
+                            <p className="text-xl mb-6">{gameOver.reason}</p>
+                            <p className="mb-4 text-gray-400">คุณจบเกมที่ปี {year} (ทำงานมา {year - START_YEAR} ปี)</p>
+                            <p className="mb-8 text-gray-400">ทรัพย์สินสุทธิ: {cash.toLocaleString()}</p>
+                            <button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-bold w-full">เริ่มชีวิตใหม่</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gray-900 text-white font-sarabun pb-20">
+                    {/* Header Info */}
+                    <header className="bg-gray-800 p-4 sticky top-0 z-10 shadow-lg border-b border-gray-700">
+                        <div className="max-w-xl mx-auto flex justify-between items-center">
+                            <div>
+                                <h1 className="font-bold text-lg text-blue-400">📅 {month < 10 ? '0'+month : month}/{year}</h1>
+                                <p className="text-xs text-gray-400">{jobTitle}</p>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-2xl font-bold text-green-400">฿{cash.toLocaleString()}</div>
+                                <div className="text-xs text-gray-400">เงินเดือน: {salary.toLocaleString()}</div>
+                            </div>
+                        </div>
+                        
+                        {/* Bars */}
+                        <div className="max-w-xl mx-auto mt-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <div className="flex justify-between text-xs mb-1">
+                                    <span>⚡ Energy</span>
+                                    <span>{energy}/100</span>
+                                </div>
+                                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                    <div className="h-full bg-yellow-400 progress-bar" style={{width: `${energy}%`}}></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div className="flex justify-between text-xs mb-1">
+                                    <span>🤯 Stress</span>
+                                    <span className={stress > 80 ? "text-red-500 blink" : ""}>{stress}/100</span>
+                                </div>
+                                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                    <div className={`h-full progress-bar ${stress > 80 ? 'bg-red-500' : 'bg-blue-400'}`} style={{width: `${stress}%`}}></div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Main Content */}
+                    <main className="p-4 max-w-xl mx-auto space-y-6">
+                        
+                        {/* Housing Section */}
+                        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-bold text-gray-300">🏠 ที่พักปัจจุบัน</h3>
+                                <button 
+                                    onClick={() => setShowEvent({
+                                        title: "ย้ายหอพัก",
+                                        desc: "เลือกที่อยู่ใหม่ (มีผลต่อเงินและสุขภาพจิต)",
+                                        choices: HOUSING_OPTIONS.map(h => ({
+                                            text: `${h.name} (${h.cost.toLocaleString()}/ด)`,
+                                            action: () => { setHousing(h); setCash(prev => prev - h.cost * 2); } // มัดจำ 2 เดือน
+                                        }))
+                                    })}
+                                    className="text-xs bg-gray-700 px-2 py-1 rounded hover:bg-gray-600"
+                                >
+                                    ย้าย
+                                </button>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="text-3xl">🛏️</div>
+                                <div>
+                                    <p className="font-bold">{housing.name}</p>
+                                    <p className="text-xs text-red-400">-{housing.cost.toLocaleString()} บาท/เดือน</p>
+                                    <p className="text-xs text-gray-500">{housing.desc}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Actions Grid */}
+                        <div>
+                            <h3 className="font-bold text-gray-300 mb-2">⚡ ทำอะไรดีเดือนนี้? (Action)</h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button 
+                                    onClick={() => performAction({type: 'WORK', cost: 30})}
+                                    className="bg-blue-900/50 hover:bg-blue-800 p-4 rounded-lg border border-blue-700 text-left transition relative overflow-hidden group"
+                                >
+                                    <div className="text-2xl mb-1">💼</div>
+                                    <div className="font-bold">ทำงานหนัก (OT)</div>
+                                    <div className="text-xs text-gray-400">-30 Energy | +Money | +Stress</div>
+                                </button>
+
+                                <button 
+                                    onClick={() => performAction({type: 'LEARN', cost: 20})}
+                                    className="bg-purple-900/50 hover:bg-purple-800 p-4 rounded-lg border border-purple-700 text-left transition"
+                                >
+                                    <div className="text-2xl mb-1">📚</div>
+                                    <div className="font-bold">Upskill</div>
+                                    <div className="text-xs text-gray-400">-20 Energy | -Money | +XP</div>
+                                </button>
+
+                                <button 
+                                    onClick={() => performAction({type: 'PARTY', cost: 20})}
+                                    className="bg-pink-900/50 hover:bg-pink-800 p-4 rounded-lg border border-pink-700 text-left transition"
+                                >
+                                    <div className="text-2xl mb-1">🍻</div>
+                                    <div className="font-bold">สังสรรค์</div>
+                                    <div className="text-xs text-gray-400">-20 Energy | -Money | +Conn</div>
+                                </button>
+
+                                <button 
+                                    onClick={() => performAction({type: 'REST', cost: 0})}
+                                    className="bg-green-900/50 hover:bg-green-800 p-4 rounded-lg border border-green-700 text-left transition"
+                                >
+                                    <div className="text-2xl mb-1">🛌</div>
+                                    <div className="font-bold">พักผ่อน</div>
+                                    <div className="text-xs text-gray-400">Free | -Stress</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Stats Overview */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-gray-800 p-3 rounded-lg text-center">
+                                <p className="text-xs text-gray-400">Career XP</p>
+                                <p className="text-xl font-bold text-purple-400">{xp}</p>
+                            </div>
+                            <div className="bg-gray-800 p-3 rounded-lg text-center">
+                                <p className="text-xs text-gray-400">Connections</p>
+                                <p className="text-xl font-bold text-pink-400">{network}</p>
+                            </div>
+                        </div>
+
+                        {/* Logs */}
+                        <div className="bg-black/30 rounded-lg p-3 max-h-40 overflow-y-auto">
+                            {logs.map(log => (
+                                <div key={log.id} className={`text-sm mb-1 ${
+                                    log.type === 'success' ? 'text-green-400' :
+                                    log.type === 'error' ? 'text-red-400' :
+                                    log.type === 'warning' ? 'text-yellow-400' : 'text-gray-400'
+                                }`}>
+                                    • {log.msg}
+                                </div>
+                            ))}
+                        </div>
+
+                    </main>
+
+                    {/* Bottom Floating Button */}
+                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-gray-900 via-gray-900 to-transparent">
+                        <button 
+                            onClick={nextMonth}
+                            className="w-full max-w-xl mx-auto bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/50 transition transform active:scale-95"
+                        >
+                            จบเดือนนี้ (Next Month) ⏩
+                        </button>
+                    </div>
+
+                    {/* Event Modal */}
+                    {showEvent && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+                            <div className="bg-gray-800 rounded-xl p-6 max-w-sm w-full border border-gray-600 shadow-2xl">
+                                <h3 className="text-xl font-bold mb-2">{showEvent.title}</h3>
+                                <p className="text-gray-300 mb-6">{showEvent.desc}</p>
+                                <div className="space-y-3">
+                                    {showEvent.choices.map((choice, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => {
+                                                choice.action();
+                                                setShowEvent(null);
+                                            }}
+                                            className="w-full bg-gray-700 hover:bg-gray-600 py-3 px-4 rounded-lg text-left text-sm font-bold transition flex justify-between group"
+                                        >
+                                            <span>{choice.text}</span>
+                                            <span className="opacity-0 group-hover:opacity-100">👈</span>
+                                        </button>
+                                    ))}
+                                    <button 
+                                        onClick={() => setShowEvent(null)}
+                                        className="w-full text-center text-gray-500 text-sm mt-2 hover:text-gray-300"
+                                    >
+                                        ปิด
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Game />);
+    </script>
+</body>
+</html>
