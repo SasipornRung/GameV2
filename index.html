@@ -3,502 +3,325 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huai Khwang Alpha: Portfolio Challenge</title>
+    <title>Huai Khwang Simulation: Set & Run</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sarabun:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Sarabun', sans-serif; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .chart-bar { transition: height 0.5s ease; }
-        .fade-in { animation: fadeIn 0.5s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        /* Scrollbar styling for financial look */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
     </style>
 </head>
-<body class="bg-gray-900 text-white h-screen overflow-hidden">
+<body class="bg-slate-900 text-white">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useMemo } = React;
 
-        // ===== GAME DATA (Based on Source Document) =====
-        
-        // 1. Asset Classes [cite: 1, 10, 19]
-        const ASSETS = {
-            TYPE_1: {
-                id: 'TYPE_1',
-                name: "Entry Level (Mass)",
-                desc: "ห้องเล็ก เข้าซอยลึก เน้น First Jobber",
-                risk: "High Volatility",
-                price: 1500000, // ราคาเริ่มต้นปี 2008
-                baseYield: 0.065, // Yield สูงแต่เสี่ยง [cite: 9]
-                maintenance: 0.01 // ค่าเสื่อมสภาพ
-            },
-            TYPE_2: {
-                id: 'TYPE_2',
-                name: "Real Demand (Mid)",
-                desc: "มาตรฐาน ใกล้รถไฟฟ้า คนทำงาน",
-                risk: "Moderate / Safe Haven",
-                price: 3000000,
-                baseYield: 0.045, // Yield กลางๆ [cite: 18]
-                maintenance: 0.005
-            },
-            TYPE_3: {
-                id: 'TYPE_3',
-                name: "Prime Luxury",
-                desc: "ติดถนนใหญ่ หายาก เน้นชาวต่างชาติ",
-                risk: "High Cap Gain / Low Liquidity",
-                price: 6000000,
-                baseYield: 0.035, // Yield ต่ำเน้นขายต่อ [cite: 27]
-                maintenance: 0.008
-            }
+        // --- Data Reference (Based on your Document) ---
+        // Growth Rates for each asset type per year (Simplified from source)
+        const MARKET_DATA = {
+            2009: { t1: 0.08, t2: 0.08, t3: 0.10, event: "Golden Age Begins" },
+            2010: { t1: 0.07, t2: 0.09, t3: 0.12, event: "Post-Flood Boom" },
+            2011: { t1: 0.10, t2: 0.10, t3: 0.15, event: "First Chinese Wave" },
+            2012: { t1: 0.06, t2: 0.08, t3: 0.12, event: "First Car Policy" },
+            2013: { t1: 0.05, t2: 0.07, t3: 0.10, event: "Political Unrest" },
+            2014: { t1: 0.05, t2: 0.06, t3: 0.08, event: "Coup d'etat" },
+            2015: { t1: 0.02, t2: 0.05, t3: 0.06, event: "Supply Overload" },
+            2016: { t1: 0.00, t2: 0.04, t3: 0.05, event: "Mass Market Stalls" },
+            2017: { t1: -0.02, t2: 0.03, t3: 0.05, event: "Household Debt" },
+            2018: { t1: -0.04, t2: 0.01, t3: 0.04, event: "LTV Measure" },
+            2019: { t1: -0.03, t2: 0.01, t3: 0.02, event: "Trade War" },
+            2020: { t1: -0.15, t2: -0.05, t3: -0.02, event: "COVID Crisis" },
+            2021: { t1: -0.05, t2: 0.02, t3: 0.20, event: "Luxury Anomaly" }, // High growth for Luxury
+            2022: { t1: -0.02, t2: 0.03, t3: 0.08, event: "Reopening" },
+            2023: { t1: -0.03, t2: 0.04, t3: 0.06, event: "Interest Hike" },
+            2024: { t1: 0.01, t2: 0.03, t3: 0.05, event: "K-Shape Recovery" }
         };
 
-        // 2. Timeline & Market Cycles [cite: 36, 48, 53, 58]
-        const TIMELINE = [
-            // Chapter 1: The Golden Age (Rising Tide Lifts All Boats)
-            { year: 2009, phase: "Golden Age", event: "MRT Boom เริ่มต้น! ความต้องการพุ่งสูง", 
-              growth: { TYPE_1: 0.08, TYPE_2: 0.08, TYPE_3: 0.10 }, hpi: 100 },
-            { year: 2010, phase: "Golden Age", event: "น้ำท่วมใหญ่ไม่กระทบคอนโด คนแห่ซื้อ", 
-              growth: { TYPE_1: 0.07, TYPE_2: 0.09, TYPE_3: 0.12 }, hpi: 108 },
-            { year: 2011, phase: "Golden Age", event: "นักลงทุนจีนกลุ่มแรกเริ่มเข้ามา", 
-              growth: { TYPE_1: 0.10, TYPE_2: 0.10, TYPE_3: 0.15 }, hpi: 118 },
-            { year: 2012, phase: "Golden Age", event: "รถคันแรกดันกำลังซื้อ (แต่เริ่มมีหนี้)", 
-              growth: { TYPE_1: 0.06, TYPE_2: 0.08, TYPE_3: 0.12 }, hpi: 128 },
-            { year: 2013, phase: "Golden Age", event: "ราคาที่ดินรัชดาพุ่งสูงสุดเป็นประวัติการณ์", 
-              growth: { TYPE_1: 0.05, TYPE_2: 0.07, TYPE_3: 0.10 }, hpi: 136 },
-            { year: 2014, phase: "Golden Age", event: "การเมืองนิ่งชั่วคราว ตลาดเดินต่อ", 
-              growth: { TYPE_1: 0.05, TYPE_2: 0.06, TYPE_3: 0.08 }, hpi: 142 },
-            
-            // Chapter 2: The Reality Check (Oversupply & Stagnation)
-            { year: 2015, phase: "Reality Check", event: "Supply ล้นตลาด! เริ่มเห็นห้องว่างเยอะ", 
-              growth: { TYPE_1: 0.02, TYPE_2: 0.05, TYPE_3: 0.06 }, hpi: 148 },
-            { year: 2016, phase: "Reality Check", event: "ตลาด Mass เริ่มอิ่มตัว Type 1 ราคาไม่วิ่ง", 
-              growth: { TYPE_1: 0.00, TYPE_2: 0.04, TYPE_3: 0.05 }, hpi: 152 },
-            { year: 2017, phase: "Reality Check", event: "หนี้ครัวเรือนพุ่ง แบงค์เริ่มปฏิเสธกู้", 
-              growth: { TYPE_1: -0.02, TYPE_2: 0.03, TYPE_3: 0.05 }, hpi: 154 },
-            { year: 2018, phase: "Reality Check", event: "มาตรการ LTV! ห้ามกู้เต็ม 100% ตลาดช็อค", 
-              growth: { TYPE_1: -0.04, TYPE_2: 0.01, TYPE_3: 0.04 }, hpi: 155 },
-            { year: 2019, phase: "Reality Check", event: "สงครามการค้า จีนเริ่มหาย", 
-              growth: { TYPE_1: -0.03, TYPE_2: 0.01, TYPE_3: 0.02 }, hpi: 155 },
+        const ASSETS = {
+            t1: { name: "Entry Level (Mass)", price: 1.5, yield: 0.06 },   // 1.5M
+            t2: { name: "Real Demand (Mid)", price: 3.0, yield: 0.045 }, // 3.0M
+            t3: { name: "Prime Luxury", price: 6.0, yield: 0.035 }       // 6.0M
+        };
 
-            // Chapter 3: The Great Divergence (K-Shaped Recovery)
-            { year: 2020, phase: "Crisis", event: "COVID-19! ตลาดพัง Type 1 โดนทิ้งดาวน์", 
-              growth: { TYPE_1: -0.15, TYPE_2: -0.05, TYPE_3: -0.02 }, hpi: 140 }, // 
-            { year: 2021, phase: "Divergence", event: "The Anomaly: ของหรูขาดตลาด ราคาพุ่งสวนทาง!", 
-              growth: { TYPE_1: -0.05, TYPE_2: 0.02, TYPE_3: 0.20 }, hpi: 145 }, // 
-            { year: 2022, phase: "Divergence", event: "จีนเปิดประเทศบางส่วน ทุนจีนรอบใหม่มา", 
-              growth: { TYPE_1: -0.02, TYPE_2: 0.03, TYPE_3: 0.08 }, hpi: 150 },
-            { year: 2023, phase: "Divergence", event: "ดอกเบี้ยขาขึ้น Type 1 กระอักเลือด", 
-              growth: { TYPE_1: -0.03, TYPE_2: 0.04, TYPE_3: 0.06 }, hpi: 155 },
-            { year: 2024, phase: "Conclusion", event: "Stock Picker's Market: เลือกผิดชีวิตเปลี่ยน", 
-              growth: { TYPE_1: 0.01, TYPE_2: 0.03, TYPE_3: 0.05 }, hpi: 160 }
-        ];
+        function Simulation() {
+            // --- 1. User Inputs (Strategy) ---
+            const [career, setCareer] = useState('manager'); // starter, manager, exec
+            const [lifestyle, setLifestyle] = useState('saver'); // saver, balanced, spender
+            const [strategy, setStrategy] = useState('balanced'); // safe, balanced, aggressive
+            const [hasRun, setHasRun] = useState(false);
+            const [results, setResults] = useState([]);
 
-        function Game() {
-            // --- State ---
-            const [yearIndex, setYearIndex] = useState(0);
-            const [cash, setCash] = useState(5000000); // Start with 5M THB
-            const [portfolio, setPortfolio] = useState([]);
-            const [logs, setLogs] = useState([{ year: 2008, msg: "Welcome, Fund Manager. Market starts now." }]);
-            const [modal, setModal] = useState(null); // 'BUY' | 'RESULT'
-            const [selectedAsset, setSelectedAsset] = useState(null);
-            const [gameOver, setGameOver] = useState(false);
-
-            const currentYearData = TIMELINE[yearIndex];
-            const currentYear = currentYearData.year;
-
-            // --- Stats Calculation ---
-            const portfolioValue = portfolio.reduce((sum, p) => sum + p.currentValue, 0);
-            const netWorth = cash + portfolioValue;
-            const cashFlow = portfolio.reduce((sum, p) => sum + (p.currentValue * p.yield), 0);
-
-            // --- Actions ---
-
-            const nextYear = () => {
-                // 1. Process Income (Rent)
-                let yearlyIncome = 0;
-                let maintenanceCost = 0;
+            // --- 2. Simulation Logic ---
+            const runSimulation = () => {
+                let currentYear = 2008;
+                // Config based on inputs
+                let salary = career === 'starter' ? 18000 : career === 'manager' ? 35000 : 60000;
+                let expenseRatio = lifestyle === 'saver' ? 0.4 : lifestyle === 'balanced' ? 0.6 : 0.8;
                 
-                const updatedPortfolio = portfolio.map(asset => {
-                    // Check Crisis Impact on Yield (Vacancy) 
-                    let actualYield = asset.yield;
-                    if (currentYearData.phase === "Crisis" && asset.type === 'TYPE_1') {
-                        actualYield = 0; // ไม่มีคนเช่า
-                    }
-                    if (currentYearData.phase === "Crisis" && asset.type === 'TYPE_3') {
-                        actualYield *= 0.8; // ลดค่าเช่าช่วยผู้เช่า
-                    }
+                let cash = 100000; // Start cash
+                let portfolio = []; // List of assets { type, value, boughtPrice }
+                let history = [];
 
-                    const income = asset.currentValue * actualYield;
-                    const cost = asset.currentValue * ASSETS[asset.type].maintenance;
+                for (let year = 2009; year <= 2024; year++) {
+                    // A. Career Growth (Auto)
+                    salary = salary * 1.10; // +10% per year
+                    if ((year - 2009) % 5 === 0) salary *= 1.20; // Promotion every 5 years
+
+                    // B. Cash Flow
+                    let yearlyIncome = salary * 12;
+                    let yearlyExpense = yearlyIncome * expenseRatio;
                     
-                    yearlyIncome += income;
-                    maintenanceCost += cost;
+                    // Rental Income
+                    let rentalIncome = 0;
+                    portfolio.forEach(asset => {
+                        let actualYield = ASSETS[asset.type].yield;
+                        // Crisis Logic: Type 1 yields drop in crisis
+                        if (year === 2020 || year === 2021) {
+                            if (asset.type === 't1') actualYield = 0; 
+                            if (asset.type === 't3') actualYield *= 0.8;
+                        }
+                        rentalIncome += asset.value * actualYield;
+                    });
 
-                    // 2. Process Capital Gain (Price Change)
-                    const growthRate = currentYearData.growth[asset.type];
-                    const newValue = asset.currentValue * (1 + growthRate);
+                    cash += (yearlyIncome - yearlyExpense) + rentalIncome;
 
-                    return { 
-                        ...asset, 
-                        currentValue: newValue,
-                        history: [...asset.history, newValue]
-                    };
-                });
+                    // C. Market Updates (Asset Growth)
+                    const market = MARKET_DATA[year];
+                    portfolio.forEach(asset => {
+                        asset.value *= (1 + market[asset.type]);
+                    });
 
-                const netIncome = yearlyIncome - maintenanceCost;
-                setCash(prev => prev + netIncome);
-                setPortfolio(updatedPortfolio);
-                
-                addLog(currentYear, `Cash Flow: +${formatMoney(netIncome)} (Income: ${formatMoney(yearlyIncome)}, Maint: ${formatMoney(maintenanceCost)})`);
+                    // D. Investment Decision (The Bot Logic)
+                    // Strategy: Buy whenever cash > Down Payment (20%) + Buffer
+                    let targetAsset = null;
+                    if (strategy === 'safe') targetAsset = 't2'; // Buy Mid-tier
+                    else if (strategy === 'aggressive') targetAsset = 't3'; // Aim for Luxury
+                    else targetAsset = (cash > 2000000) ? 't2' : 't1'; // Mixed
 
-                // 3. Move Time
-                if (yearIndex < TIMELINE.length - 1) {
-                    setYearIndex(prev => prev + 1);
-                } else {
-                    setGameOver(true);
+                    // Price calculation (Inflation adjusted)
+                    // Simplified: Asset prices grow same as market roughly
+                    // Need to track "Market Price" of new assets
+                    let marketPriceT1 = ASSETS.t1.price * 1000000;
+                    let marketPriceT2 = ASSETS.t2.price * 1000000;
+                    let marketPriceT3 = ASSETS.t3.price * 1000000;
+                    
+                    // Re-calculate market prices based on history
+                    for(let y=2009; y<=year; y++) {
+                        marketPriceT1 *= (1 + MARKET_DATA[y].t1);
+                        marketPriceT2 *= (1 + MARKET_DATA[y].t2);
+                        marketPriceT3 *= (1 + MARKET_DATA[y].t3);
+                    }
+
+                    let buyTarget = null;
+                    let buyPrice = 0;
+
+                    if (strategy === 'safe' && cash > marketPriceT2 * 0.3) { buyTarget = 't2'; buyPrice = marketPriceT2; }
+                    else if (strategy === 'aggressive' && cash > marketPriceT3 * 0.3) { buyTarget = 't3'; buyPrice = marketPriceT3; }
+                    else if (strategy === 'balanced') {
+                        if (cash > marketPriceT2 * 0.3) { buyTarget = 't2'; buyPrice = marketPriceT2; }
+                        else if (cash > marketPriceT1 * 0.4 && portfolio.length < 2) { buyTarget = 't1'; buyPrice = marketPriceT1; } // Limit junk assets
+                    }
+
+                    // Execute Buy (Assume 80% Loan)
+                    if (buyTarget) {
+                        // Check if DSR is okay (Simplified: Debt payment < 40% salary)
+                        let monthlyInstallment = (buyPrice * 0.8 * 0.006); // Rough installment
+                        let currentDebt = portfolio.reduce((sum, p) => sum + (p.boughtPrice * 0.8 * 0.006), 0);
+                        
+                        if ((currentDebt + monthlyInstallment) < salary * 0.5) {
+                            let downPayment = buyPrice * 0.2;
+                            cash -= downPayment;
+                            portfolio.push({
+                                type: buyTarget,
+                                value: buyPrice,
+                                boughtPrice: buyPrice,
+                                yearBought: year
+                            });
+                        }
+                    }
+
+                    // Store History
+                    let portfolioValue = portfolio.reduce((sum, p) => sum + p.value, 0);
+                    let loanBalance = portfolio.reduce((sum, p) => sum + (p.boughtPrice * 0.8), 0); // Simplified: No principal reduction
+                    let netWorth = cash + portfolioValue - loanBalance;
+
+                    history.push({
+                        year,
+                        salary,
+                        netWorth,
+                        assetsCount: portfolio.length,
+                        event: market.event
+                    });
                 }
-            };
-
-            const buyAsset = (typeKey) => {
-                const assetTemplate = ASSETS[typeKey];
-                // Calculate Price based on HPI roughly (simplified)
-                // In game reality, we should track price index per asset type, but for simplicity:
-                // We use base price * accumulated growth so far
-                // (To implement perfectly, we'd need to track global price indices per type. Let's approximate)
                 
-                // Better approach for simulation: Calculate current market price based on year
-                let marketPrice = assetTemplate.price;
-                for(let i=0; i<yearIndex; i++) {
-                    marketPrice *= (1 + TIMELINE[i].growth[typeKey]);
-                }
-
-                if (cash < marketPrice) {
-                    alert("เงินสดไม่พอ!");
-                    return;
-                }
-
-                const newAsset = {
-                    id: Date.now(),
-                    type: typeKey,
-                    name: assetTemplate.name,
-                    purchasePrice: marketPrice,
-                    currentValue: marketPrice,
-                    yield: assetTemplate.baseYield,
-                    history: [marketPrice]
-                };
-
-                setCash(prev => prev - marketPrice);
-                setPortfolio(prev => [...prev, newAsset]);
-                setModal(null);
-                addLog(currentYear, `ซื้อ ${assetTemplate.name} ราคา ${formatMoney(marketPrice)}`);
+                setResults(history);
+                setHasRun(true);
             };
 
-            const sellAsset = (assetId) => {
-                const asset = portfolio.find(p => p.id === assetId);
-                const salePrice = asset.currentValue; // No transaction fee for simplicity
+            // --- 3. Visualization (Simple SVG Chart) ---
+            const Chart = ({ data }) => {
+                if (!data || data.length === 0) return null;
+                const maxVal = Math.max(...data.map(d => d.netWorth));
+                const minVal = Math.min(...data.map(d => d.netWorth));
+                const height = 200;
+                const width = 100; // percentage
                 
-                setCash(prev => prev + salePrice);
-                setPortfolio(prev => prev.filter(p => p.id !== assetId));
-                
-                const profit = salePrice - asset.purchasePrice;
-                const profitPercent = (profit / asset.purchasePrice) * 100;
-                addLog(currentYear, `ขาย ${asset.name} กำไร: ${formatMoney(profit)} (${profitPercent.toFixed(1)}%)`);
-            };
-
-            const addLog = (y, msg) => {
-                setLogs(prev => [{year: y, msg}, ...prev]);
-            };
-
-            const formatMoney = (num) => {
-                if (Math.abs(num) >= 1000000) return (num / 1000000).toFixed(2) + "M";
-                if (Math.abs(num) >= 1000) return (num / 1000).toFixed(0) + "K";
-                return num.toFixed(0);
-            };
-
-            // --- Render Components ---
-
-            if (gameOver) {
-                const initialWealth = 5000000;
-                const totalGain = netWorth - initialWealth;
-                const roi = (totalGain / initialWealth) * 100;
+                const points = data.map((d, i) => {
+                    const x = (i / (data.length - 1)) * 100;
+                    const y = 100 - ((d.netWorth - minVal) / (maxVal - minVal || 1)) * 100;
+                    return `${x},${y}`;
+                }).join(" ");
 
                 return (
-                    <div className="h-full flex items-center justify-center bg-gray-900 p-4">
-                        <div className="bg-gray-800 p-8 rounded-xl max-w-2xl w-full border border-gray-600 shadow-2xl text-center">
-                            <h1 className="text-4xl font-bold mb-2 text-blue-400">สรุปผลงานปี 2024</h1>
-                            <p className="text-gray-400 mb-8">คุณเป็น Fund Manager แบบไหน?</p>
+                    <div className="w-full h-48 bg-slate-800 rounded-lg relative mt-4 p-2 border border-slate-700">
+                        <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            {/* Grid lines */}
+                            <line x1="0" y1="25" x2="100" y2="25" stroke="#334155" strokeWidth="0.5" />
+                            <line x1="0" y1="50" x2="100" y2="50" stroke="#334155" strokeWidth="0.5" />
+                            <line x1="0" y1="75" x2="100" y2="75" stroke="#334155" strokeWidth="0.5" />
                             
-                            <div className="grid grid-cols-2 gap-4 mb-8">
-                                <div className="bg-gray-700 p-4 rounded">
-                                    <p className="text-sm text-gray-400">Final Net Worth</p>
-                                    <p className="text-3xl font-mono font-bold text-white">{formatMoney(netWorth)}</p>
-                                </div>
-                                <div className="bg-gray-700 p-4 rounded">
-                                    <p className="text-sm text-gray-400">Total ROI</p>
-                                    <p className={`text-3xl font-mono font-bold ${roi > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {roi.toFixed(1)}%
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="text-left bg-black/30 p-4 rounded mb-6 text-sm text-gray-300">
-                                <p className="font-bold mb-2">💡 บทวิเคราะห์ (Auditor's Note):</p>
-                                <ul className="list-disc pl-5 space-y-1">
-                                    <li>ถ้า ROI &gt; 200%: คุณคือเซียนที่อ่านขาดเรื่อง "K-Shaped Recovery" และกล้าซื้อของแพง (Type 3) ในช่วงวิกฤต </li>
-                                    <li>ถ้า ROI &lt; 50%: คุณอาจติดกับดัก "Mass Market" (Type 1) ที่ราคาไม่ไปไหนเลยหลังปี 2016 [cite: 63]</li>
-                                    <li>ห้วยขวางไม่ใช่หุ้น Growth อีกต่อไป แต่เป็นตลาดที่ต้อง "เลือกให้ถูกตัว" (Stock Picker's Market) </li>
-                                </ul>
-                            </div>
-
-                            <button onClick={() => window.location.reload()} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full transition">
-                                เริ่มกระดานใหม่
-                            </button>
-                        </div>
+                            {/* The Graph Line */}
+                            <polyline points={points} fill="none" stroke="#3b82f6" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                        </svg>
+                        
+                        {/* Labels for Key Events */}
+                        {data.map((d, i) => {
+                            if (d.year === 2020 || d.year === 2015 || d.year === 2024) {
+                                return (
+                                    <div key={i} className="absolute text-[10px] text-gray-400" 
+                                         style={{ left: `${(i / (data.length - 1)) * 100}%`, bottom: '-20px', transform: 'translateX(-50%)' }}>
+                                        {d.year}
+                                    </div>
+                                )
+                            }
+                            return null;
+                        })}
                     </div>
                 );
-            }
+            };
 
             return (
-                <div className="flex flex-col h-full max-w-6xl mx-auto bg-gray-900 shadow-2xl overflow-hidden">
-                    
-                    {/* 1. Header / Ticker */}
-                    <header className="bg-gray-800 border-b border-gray-700 p-3 flex justify-between items-center z-10">
-                        <div className="flex items-center gap-4">
-                            <h1 className="font-bold text-xl tracking-tighter text-blue-400">HUAI KHWANG <span className="text-white">ALPHA</span></h1>
-                            <span className="bg-gray-700 px-2 py-1 rounded text-xs text-gray-300 font-mono">
-                                YEAR: {currentYear}
-                            </span>
-                            <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                currentYearData.phase === 'Golden Age' ? 'bg-yellow-500/20 text-yellow-400' :
-                                currentYearData.phase === 'Crisis' ? 'bg-red-500/20 text-red-400' :
-                                'bg-blue-500/20 text-blue-400'
-                            }`}>
-                                {currentYearData.phase}
-                            </span>
-                        </div>
-                        <div className="flex gap-6 font-mono text-sm">
-                            <div className="text-right">
-                                <p className="text-gray-400 text-xs">CASH</p>
-                                <p className="text-white font-bold">฿{formatMoney(cash)}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-gray-400 text-xs">AUM (NET WORTH)</p>
-                                <p className="text-blue-300 font-bold">฿{formatMoney(netWorth)}</p>
-                            </div>
-                        </div>
-                    </header>
+                <div className="min-h-screen p-6 max-w-4xl mx-auto">
+                    <h1 className="text-3xl font-bold mb-2 text-blue-400">Huai Khwang Auto-Sim 🏙️</h1>
+                    <p className="text-gray-400 mb-6">วางแผนครั้งเดียว แล้วดูผลลัพธ์ 16 ปี (2009-2024)</p>
 
-                    {/* 2. Main Workspace */}
-                    <div className="flex-1 flex overflow-hidden">
-                        
-                        {/* Left: Market Data & Chart */}
-                        <div className="w-2/3 flex flex-col border-r border-gray-700">
-                            
-                            {/* News Ticker */}
-                            <div className="bg-black p-2 border-b border-gray-700 overflow-hidden whitespace-nowrap">
-                                <p className="text-green-400 font-mono text-sm animate-pulse">
-                                    >>> BREAKING NEWS: {currentYearData.event}
-                                </p>
-                            </div>
-
-                            {/* Chart Area */}
-                            <div className="flex-1 bg-gray-900 p-6 relative">
-                                <h3 className="text-gray-400 text-sm mb-4 flex items-center gap-2">
-                                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                                    HPI Index (ดัชนีราคา)
-                                </h3>
-                                <div className="absolute inset-x-6 bottom-6 top-16 flex items-end gap-1">
-                                    {TIMELINE.slice(0, yearIndex + 1).map((t, i) => (
-                                        <div key={i} className="flex-1 flex flex-col justify-end group relative">
-                                            <div 
-                                                className={`w-full hover:bg-blue-400 transition-all cursor-pointer ${
-                                                    t.phase === 'Golden Age' ? 'bg-green-500' :
-                                                    t.phase === 'Crisis' ? 'bg-red-500' :
-                                                    'bg-blue-600'
-                                                }`}
-                                                style={{ height: `${(t.hpi - 80) * 1.5}%` }}
-                                            ></div>
-                                            {/* Tooltip */}
-                                            <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 left-0 bg-gray-800 text-xs p-2 rounded border border-gray-600 z-10 w-32">
-                                                Year: {t.year}<br/>
-                                                HPI: {t.hpi}<br/>
-                                                {t.phase}
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {/* Ghost bars for future */}
-                                    {TIMELINE.slice(yearIndex + 1).map((t, i) => (
-                                        <div key={i} className="flex-1 bg-gray-800/30 h-full border-b border-gray-700"></div>
-                                    ))}
-                                </div>
-                                
-                                {/* Market Sentiment Overlay */}
-                                <div className="absolute top-4 right-4 bg-gray-800/80 p-3 rounded backdrop-blur border border-gray-600 text-xs">
-                                    <p className="text-gray-400 mb-1">Market Sentiment</p>
-                                    <div className="space-y-1">
-                                        <div className="flex justify-between gap-4">
-                                            <span>Type 1 (Mass):</span>
-                                            <span className={currentYearData.growth.TYPE_1 >= 0 ? 'text-green-400' : 'text-red-400'}>
-                                                {(currentYearData.growth.TYPE_1 * 100).toFixed(1)}%
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between gap-4">
-                                            <span>Type 2 (Real):</span>
-                                            <span className={currentYearData.growth.TYPE_2 >= 0 ? 'text-green-400' : 'text-red-400'}>
-                                                {(currentYearData.growth.TYPE_2 * 100).toFixed(1)}%
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between gap-4">
-                                            <span>Type 3 (Prime):</span>
-                                            <span className={currentYearData.growth.TYPE_3 >= 0 ? 'text-green-400' : 'text-red-400'}>
-                                                {(currentYearData.growth.TYPE_3 * 100).toFixed(1)}%
-                                            </span>
-                                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        {/* Input Section */}
+                        <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                            <h3 className="text-lg font-bold mb-4 text-white">1. เลือกเส้นทางอาชีพ</h3>
+                            <div className="space-y-2">
+                                {[
+                                    {id: 'starter', label: 'General Staff', sub: 'Start 18k'},
+                                    {id: 'manager', label: 'Management Track', sub: 'Start 35k'},
+                                    {id: 'exec', label: 'Fast Track / Tech', sub: 'Start 60k'}
+                                ].map(c => (
+                                    <div key={c.id} 
+                                        onClick={() => setCareer(c.id)}
+                                        className={`p-3 rounded cursor-pointer transition ${career === c.id ? 'bg-blue-600 border border-blue-400' : 'bg-slate-700 hover:bg-slate-600'}`}>
+                                        <div className="font-bold">{c.label}</div>
+                                        <div className="text-xs opacity-75">{c.sub} (+10%/ปี)</div>
                                     </div>
-                                </div>
-                            </div>
-
-                            {/* Control Panel */}
-                            <div className="bg-gray-800 p-4 border-t border-gray-700 flex justify-between items-center">
-                                <div className="flex gap-2">
-                                    <button 
-                                        onClick={() => setModal('BUY')}
-                                        className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded shadow-[0_0_10px_rgba(34,197,94,0.3)] transition"
-                                    >
-                                        + BUY ASSET
-                                    </button>
-                                </div>
-                                <button 
-                                    onClick={nextYear}
-                                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded shadow-[0_0_15px_rgba(59,130,246,0.4)] animate-pulse"
-                                >
-                                    NEXT YEAR >>
-                                </button>
+                                ))}
                             </div>
                         </div>
 
-                        {/* Right: Portfolio & Logs */}
-                        <div className="w-1/3 flex flex-col bg-gray-850">
-                            
-                            {/* Portfolio List */}
-                            <div className="flex-1 overflow-y-auto p-4 border-b border-gray-700">
-                                <h3 className="text-gray-400 text-xs font-bold mb-3 uppercase tracking-wider">Your Portfolio ({portfolio.length})</h3>
-                                {portfolio.length === 0 ? (
-                                    <div className="text-center text-gray-600 mt-10 p-4 border-2 border-dashed border-gray-700 rounded">
-                                        No Assets.<br/>Market is moving, start investing!
+                        <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                            <h3 className="text-lg font-bold mb-4 text-white">2. นิสัยการใช้เงิน</h3>
+                            <div className="space-y-2">
+                                {[
+                                    {id: 'saver', label: 'สายประหยัด', sub: 'ใช้ 40% เก็บ 60%'},
+                                    {id: 'balanced', label: 'สายสมดุล (Balance)', sub: 'ใช้ 60% เก็บ 40%'},
+                                    {id: 'spender', label: 'สายเปย์ (YOLO)', sub: 'ใช้ 80% เก็บ 20%'}
+                                ].map(l => (
+                                    <div key={l.id} 
+                                        onClick={() => setLifestyle(l.id)}
+                                        className={`p-3 rounded cursor-pointer transition ${lifestyle === l.id ? 'bg-green-600 border border-green-400' : 'bg-slate-700 hover:bg-slate-600'}`}>
+                                        <div className="font-bold">{l.label}</div>
+                                        <div className="text-xs opacity-75">{l.sub}</div>
                                     </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {portfolio.map(asset => {
-                                            const gain = ((asset.currentValue - asset.purchasePrice) / asset.purchasePrice) * 100;
-                                            return (
-                                                <div key={asset.id} className="bg-gray-800 p-3 rounded border-l-4 border-blue-500 flex justify-between items-center group hover:bg-gray-750 transition">
-                                                    <div>
-                                                        <p className="font-bold text-sm text-gray-200">{asset.name}</p>
-                                                        <p className="text-xs text-gray-500">{formatMoney(asset.currentValue)}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className={`font-mono font-bold text-sm ${gain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                            {gain > 0 ? '+' : ''}{gain.toFixed(1)}%
-                                                        </p>
-                                                        <button 
-                                                            onClick={() => sellAsset(asset.id)}
-                                                            className="text-xs text-red-400 hover:text-red-300 underline opacity-0 group-hover:opacity-100 transition"
-                                                        >
-                                                            SELL
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+                                ))}
                             </div>
+                        </div>
 
-                            {/* Logs Terminal */}
-                            <div className="h-1/3 bg-black p-3 font-mono text-xs overflow-y-auto border-t border-gray-700">
-                                <h3 className="text-gray-500 mb-2">SYSTEM LOGS_</h3>
-                                {logs.map((log, i) => (
-                                    <div key={i} className="mb-1 text-gray-300">
-                                        <span className="text-blue-500">[{log.year}]</span> {log.msg}
+                        <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                            <h3 className="text-lg font-bold mb-4 text-white">3. กลยุทธ์ลงทุน</h3>
+                            <div className="space-y-2">
+                                {[
+                                    {id: 'balanced', label: 'Mixed Strategy', sub: 'ซื้อตามกำลังทรัพย์'},
+                                    {id: 'safe', label: 'Quality Focus', sub: 'เก็บเงินรอซื้อ Type 2 เท่านั้น'},
+                                    {id: 'aggressive', label: 'Sniper (Luxury)', sub: 'เล็ง Type 3 (ของหายาก)'}
+                                ].map(s => (
+                                    <div key={s.id} 
+                                        onClick={() => setStrategy(s.id)}
+                                        className={`p-3 rounded cursor-pointer transition ${strategy === s.id ? 'bg-purple-600 border border-purple-400' : 'bg-slate-700 hover:bg-slate-600'}`}>
+                                        <div className="font-bold">{s.label}</div>
+                                        <div className="text-xs opacity-75">{s.sub}</div>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </div>
 
-                    {/* Buy Modal */}
-                    {modal === 'BUY' && (
-                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm fade-in">
-                            <div className="bg-gray-800 rounded-xl max-w-4xl w-full border border-gray-600 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                                <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900">
-                                    <h2 className="text-xl font-bold text-white">MARKET OPPORTUNITIES ({currentYear})</h2>
-                                    <button onClick={() => setModal(null)} className="text-gray-400 hover:text-white">✕</button>
+                    <button 
+                        onClick={runSimulation}
+                        className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-bold text-xl py-4 rounded-xl shadow-lg mb-8 transition transform active:scale-95"
+                    >
+                        🚀 Run Simulation (2008-2024)
+                    </button>
+
+                    {/* Results Section */}
+                    {hasRun && (
+                        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-fade-in">
+                            <div className="flex justify-between items-end mb-4">
+                                <div>
+                                    <h2 className="text-2xl font-bold">ผลลัพธ์ปี 2024</h2>
+                                    <p className="text-gray-400">ทรัพย์สินสุทธิ (Net Worth)</p>
                                 </div>
-                                
-                                <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 overflow-y-auto">
-                                    {Object.keys(ASSETS).map(key => {
-                                        const asset = ASSETS[key];
-                                        // Calculate current market price
-                                        let currentPrice = asset.price;
-                                        for(let i=0; i<yearIndex; i++) currentPrice *= (1 + TIMELINE[i].growth[key]);
-                                        
-                                        const canAfford = cash >= currentPrice;
-
-                                        return (
-                                            <div key={key} className={`relative p-5 rounded-lg border transition-all ${
-                                                selectedAsset === key ? 'border-blue-400 bg-blue-900/20' : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
-                                            } ${!canAfford ? 'opacity-50 grayscale' : ''}`}>
-                                                
-                                                <div className="absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded bg-black/40 text-gray-300">
-                                                    {asset.risk}
-                                                </div>
-
-                                                <h3 className="font-bold text-lg mb-1">{asset.name}</h3>
-                                                <p className="text-xs text-gray-400 mb-4 h-10">{asset.desc}</p>
-                                                
-                                                <div className="space-y-2 mb-4 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-400">Market Price:</span>
-                                                        <span className="font-mono font-bold">{formatMoney(currentPrice)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-400">Est. Yield:</span>
-                                                        <span className="font-mono text-green-400">{(asset.baseYield * 100).toFixed(1)}%</span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Analyst Note [cite: 31, 33] */}
-                                                <div className="bg-black/20 p-2 rounded text-[10px] text-gray-300 mb-4 italic">
-                                                    "Analyst: {
-                                                        key === 'TYPE_1' ? "ระวัง! ผู้เช่ากลุ่มนี้เปราะบางต่อวิกฤต (High Risk during Crisis)" :
-                                                        key === 'TYPE_2' ? "ทางสายกลาง ปลอดภัย สภาพคล่องสูง (Inflation Hedge)" :
-                                                        "ของหายาก! ถ้าถือยาวได้มีโอกาสชนะตลาดสูงมาก (Scarcity Value)"
-                                                    }"
-                                                </div>
-
-                                                <button 
-                                                    onClick={() => canAfford && buyAsset(key)}
-                                                    disabled={!canAfford}
-                                                    className={`w-full py-2 rounded font-bold ${
-                                                        canAfford ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                                    }`}
-                                                >
-                                                    {canAfford ? 'BUY NOW' : 'INSUFFICIENT FUNDS'}
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
+                                <div className="text-right">
+                                    <div className="text-4xl font-bold text-green-400">
+                                        {(results[results.length-1].netWorth / 1000000).toFixed(2)}M
+                                    </div>
+                                    <div className="text-sm text-gray-400">
+                                        เงินเดือนจบที่: {(results[results.length-1].salary).toLocaleString()}
+                                    </div>
                                 </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4 mb-6">
+                                <div className="bg-slate-900 p-3 rounded text-center">
+                                    <div className="text-xs text-gray-400">จำนวนทรัพย์สิน</div>
+                                    <div className="text-xl font-bold">{results[results.length-1].assetsCount} ยูนิต</div>
+                                </div>
+                                <div className="bg-slate-900 p-3 rounded text-center">
+                                    <div className="text-xs text-gray-400">ผ่านวิกฤต COVID</div>
+                                    <div className={`text-xl font-bold ${results.find(r => r.year === 2020).netWorth > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        {results.find(r => r.year === 2020).netWorth > 0 ? 'รอด ✅' : 'ล้มละลาย ❌'}
+                                    </div>
+                                </div>
+                                <div className="bg-slate-900 p-3 rounded text-center">
+                                    <div className="text-xs text-gray-400">Performance</div>
+                                    <div className="text-xl font-bold text-blue-400">
+                                        {results[results.length-1].netWorth > 10000000 ? 'Wealthy 🏆' : 'Average 😐'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h3 className="font-bold text-gray-300">กราฟการเติบโตของความมั่งคั่ง</h3>
+                            <Chart data={results} />
+                            
+                            {/* Analysis Text */}
+                            <div className="mt-6 p-4 bg-slate-900/50 rounded border-l-4 border-yellow-500 text-sm space-y-2">
+                                <p className="font-bold text-yellow-400">💡 บทวิเคราะห์จาก AI:</p>
+                                {strategy === 'aggressive' && results[results.length-1].netWorth > 15000000 ? (
+                                    <p>คุณเลือกถูก! การรอเก็บเงินซื้อ Luxury (Type 3) ทำให้พอร์ตคุณโตกระโดดในปี 2021 ซึ่งชนะตลาด Mass Market ขาดลอย</p>
+                                ) : strategy === 'balanced' && results[results.length-1].assetsCount > 3 ? (
+                                    <p>คุณสะสมทรัพย์สินได้เยอะ แต่ระวัง! การมี Type 1 เยอะเกินไปในช่วงหลังปี 2016 ทำให้มูลค่าพอร์ตไม่ไปไหนเพราะราคาตลาดนิ่ง</p>
+                                ) : (
+                                    <p>พอร์ตของคุณเติบโตตามมาตรฐาน การเลือก Asset Class มีผลมากในช่วงหลังโควิด (K-Shaped Recovery) ลองเปลี่ยนกลยุทธ์ดูไหม?</p>
+                                )}
                             </div>
                         </div>
                     )}
@@ -507,7 +330,7 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<Game />);
+        root.render(<Simulation />);
     </script>
 </body>
 </html>
