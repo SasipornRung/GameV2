@@ -3,842 +3,520 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huai Khwang Property Game</title>
+    <title>The Property Archetype: Bangkok Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script type="importmap">
-    {
-        "imports": {
-            "react": "https://esm.sh/react@18.2.0",
-            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-            "lucide-react": "https://esm.sh/lucide-react@0.263.1"
-        }
-    }
-    </script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f0f4f8; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .card-hover:hover { transform: translateY(-5px); transition: all 0.3s; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;800&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-900">
-    <div id="root"></div>
+<body class="text-gray-800">
 
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect } from 'react';
-        import ReactDOM from 'react-dom/client';
-        // แก้ไข: เพิ่ม Activity เข้าไปใน import ไม่งั้นจะ Error
-        import { Home, DollarSign, TrendingUp, TrendingDown, Zap, Heart, Briefcase, Calendar, AlertTriangle, Award, BarChart3, Users, Building2, Landmark, Activity } from 'lucide-react';
+    <div id="app" class="max-w-4xl mx-auto min-h-screen bg-white shadow-2xl relative overflow-hidden">
+        
+        <header class="bg-slate-900 text-white p-6 flex justify-between items-center shadow-lg z-10 relative">
+            <div>
+                <h1 class="text-2xl font-bold tracking-wider">🏙️ THE PROPERTY ARCHETYPE</h1>
+                <p class="text-xs text-slate-400">Bangkok Real Estate Simulator</p>
+            </div>
+            <div id="status-bar" class="hidden text-right">
+                <p class="text-sm">Year: <span id="year-display" class="font-bold text-yellow-400">2019</span></p>
+                <p class="text-sm">Cash: <span id="cash-display" class="font-bold text-green-400">0</span> THB</p>
+            </div>
+        </header>
 
-        // ===== COMPLETE GAME DATA =====
-        const ARCHETYPES = {
-        fresh_grad: {
-            name: "Fresh Graduate", nameTH: "รุ่นใหม่หัวใจเกินร้อย", emoji: "🎓",
-            desc: "เริ่มต้นจากศูนย์ แต่เต็มไปด้วยความหวัง",
-            startSalary: 12000, salaryGrowth: 0.08, savingRate: 0.15, riskAppetite: 4,
-            dtiThreshold: 0.50, panicThreshold: 2, mortgagePreference: "floating",
-            personality: "ชอบความเสี่ยง เชื่อในอนาคต ตื่นตระหนกง่ายในวิกฤตแรก"
-        },
-        corporate: {
-            name: "Corporate Climber", nameTH: "นักปีนบันไดองค์กร", emoji: "💼",
-            desc: "มีระเบียบ คำนวณดี มองการลงทุนเป็นเกมหมากรุก",
-            startSalary: 25000, salaryGrowth: 0.12, savingRate: 0.30, riskAppetite: 3,
-            dtiThreshold: 0.35, panicThreshold: 6, mortgagePreference: "fixed",
-            personality: "ระมัดระวัง ชอบ Fixed Rate ไม่ตื่นตระหนกง่าย"
-        },
-        power_couple: {
-            name: "Power Couple", nameTH: "คู่ดับเบิ้ลตัวคูณ", emoji: "👫",
-            desc: "สองหัวใจ หนึ่งพอร์ต กำลังซื้อสูงสุด",
-            startSalary: 50000, salaryGrowth: 0.07, savingRate: 0.40, riskAppetite: 2,
-            dtiThreshold: 0.35, panicThreshold: 999, mortgagePreference: "fixed",
-            personality: "อนุรักษ์นิยม ไม่มีวันขายขาดทุน มีเงินสำรองมหาศาล"
-        },
-        fomo: {
-            name: "FOMO Gambler", nameTH: "นักเสี่ยงโชคตามกระแส", emoji: "🎰",
-            desc: "ซื้อตามกระแส ขายตามความกลัว",
-            startSalary: 18000, salaryGrowth: 0.06, savingRate: 0.10, riskAppetite: 5,
-            dtiThreshold: 0.50, panicThreshold: 1, mortgagePreference: "floating",
-            personality: "All-in ทุกครั้ง ตื่นตระหนกเร็วที่สุด เคยร่ำรวยแล้วล้มละลาย"
-        },
-        inheritance: {
-            name: "Inheritance Accelerator", nameTH: "ลูกรวย Gen 2", emoji: "💎",
-            desc: "เงินทุนจากครอบครัว สามารถรอคอยโอกาสได้",
-            startSalary: 30000, salaryGrowth: 0.04, savingRate: 0.10, riskAppetite: 5,
-            dtiThreshold: 0.50, panicThreshold: 999, mortgagePreference: "hybrid",
-            inheritanceYears: [2008, 2018], inheritanceAmount: [2000000, 5000000],
-            personality: "มีแผนสำรองเสมอ ซื้อเฉพาะ Luxury รอดทุกวิกฤต"
-        },
-        late_bloomer: {
-            name: "Late Bloomer", nameTH: "คนเริ่มช้าแต่มั่นคง", emoji: "🌱",
-            desc: "รอจังหวะที่ใช่ ไม่รีบร้อน",
-            startSalary: 15000, salaryGrowth: 0.03, savingRate: 0.35, riskAppetite: 2,
-            dtiThreshold: 0.35, panicThreshold: 4, mortgagePreference: "fixed",
-            startBuyingYear: 2012,
-            personality: "อดทนรอจนถึงจุดต่ำสุด พลาดบูมแต่รอดวิกฤต"
-        },
-        side_hustle: {
-            name: "Side-Hustle Entrepreneur", nameTH: "นักรบฟรีแลนซ์", emoji: "🚀",
-            desc: "รายได้ไม่แน่นอน แต่มีกระแสเงินสดหมุนไว",
-            startSalary: 18000, salaryGrowth: 0.10, savingRate: 0.25, riskAppetite: 4,
-            dtiThreshold: 0.45, panicThreshold: 3, mortgagePreference: "floating",
-            volatileIncome: true,
-            personality: "รายได้ขึ้นๆลงๆ ซื้อหลายหลัง ตั้งเป้าสร้างอาณาจักรเช่า"
-        },
-        expat_chaser: {
-            name: "Expat Chaser", nameTH: "นักล่าเงินตราต่างประเทศ", emoji: "🌏",
-            desc: "เดิมพันกับกระแสชาวต่างชาติ",
-            startSalary: 20000, salaryGrowth: 0.06, savingRate: 0.20, riskAppetite: 5,
-            dtiThreshold: 0.50, panicThreshold: 2, mortgagePreference: "floating",
-            personality: "ซื้อที่ชาวต่างชาติชอบ วิกฤต COVID ทำลายหนัก"
-        }
+        <section id="scene-character" class="p-10 fade-in h-full flex flex-col justify-center">
+            <h2 class="text-3xl font-bold text-center mb-2">เลือกตัวละครของคุณ</h2>
+            <p class="text-center text-gray-500 mb-8">เงินเดือนและเครดิตของคุณจะเป็นจุดเริ่มต้นของการลงทุน</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <button onclick="selectCharacter('junior')" class="card-hover bg-slate-100 p-6 rounded-xl border-2 border-slate-200 hover:border-blue-500 text-left group">
+                    <div class="text-4xl mb-4">🎒</div>
+                    <h3 class="text-xl font-bold group-hover:text-blue-600">The First Jobber</h3>
+                    <p class="text-sm text-gray-500 mt-2">Salary: 25,000 THB</p>
+                    <p class="text-sm text-gray-500">Credit Line: 2.5 MB</p>
+                    <p class="text-xs text-blue-500 mt-4 font-bold">ความท้าทาย: งบจำกัด ตัวเลือกน้อย</p>
+                </button>
+                
+                <button onclick="selectCharacter('manager')" class="card-hover bg-slate-100 p-6 rounded-xl border-2 border-slate-200 hover:border-purple-500 text-left group">
+                    <div class="text-4xl mb-4">💼</div>
+                    <h3 class="text-xl font-bold group-hover:text-purple-600">The Manager</h3>
+                    <p class="text-sm text-gray-500 mt-2">Salary: 70,000 THB</p>
+                    <p class="text-sm text-gray-500">Credit Line: 6.0 MB</p>
+                    <p class="text-xs text-purple-500 mt-4 font-bold">ความท้าทาย: กับดักชนชั้นกลาง</p>
+                </button>
+                
+                <button onclick="selectCharacter('exec')" class="card-hover bg-slate-100 p-6 rounded-xl border-2 border-slate-200 hover:border-amber-500 text-left group">
+                    <div class="text-4xl mb-4">🥂</div>
+                    <h3 class="text-xl font-bold group-hover:text-amber-600">The Executive</h3>
+                    <p class="text-sm text-gray-500 mt-2">Salary: 200,000+ THB</p>
+                    <p class="text-sm text-gray-500">Credit Line: 15.0 MB</p>
+                    <p class="text-xs text-amber-500 mt-4 font-bold">ความท้าทาย: อีโก้และการมองข้ามของเล็ก</p>
+                </button>
+            </div>
+        </section>
+
+        <section id="scene-map" class="hidden p-6 fade-in relative">
+            <h2 class="text-2xl font-bold text-center mb-6">Interactive Market Map (Year 2019)</h2>
+            <div class="bg-blue-50 p-4 rounded-lg mb-6 border-l-4 border-blue-500 text-sm">
+                <p>💡 <b>Market Insight:</b> เลือกทำเลที่คุณคิดว่ามีศักยภาพสูงสุด กราฟแสดงผลตอบแทนย้อนหลัง 5 ปี (2014-2019)</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 h-[500px]">
+                <div onclick="selectDistrict('A')" class="card-hover cursor-pointer relative bg-white border-2 border-gray-200 rounded-2xl p-6 overflow-hidden hover:border-red-500">
+                    <div class="absolute top-0 right-0 bg-red-500 text-white text-xs px-2 py-1 rounded-bl-lg font-bold">HOT 🔥</div>
+                    <h3 class="text-2xl font-bold text-gray-800">📍 District A (Huai Khwang)</h3>
+                    <p class="text-gray-500 text-sm mb-4">New CBD Extension</p>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between border-b pb-1">
+                            <span>Avg Price:</span>
+                            <span class="font-bold text-green-600">145,000 / sq.m.</span>
+                        </div>
+                        <div class="flex justify-between border-b pb-1">
+                            <span>5-Year Growth:</span>
+                            <span class="font-bold text-green-600">+45% 🚀</span>
+                        </div>
+                        <div class="flex justify-between border-b pb-1">
+                            <span>Avg Yield:</span>
+                            <span class="font-bold text-gray-600">4.8%</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 h-32 bg-gray-50 rounded flex items-end px-2 space-x-2">
+                        <div class="w-1/5 bg-red-200 h-[40%]"></div>
+                        <div class="w-1/5 bg-red-300 h-[55%]"></div>
+                        <div class="w-1/5 bg-red-400 h-[70%]"></div>
+                        <div class="w-1/5 bg-red-500 h-[85%]"></div>
+                        <div class="w-1/5 bg-red-600 h-[100%] shadow-lg relative"><span class="absolute -top-6 left-0 text-xs font-bold text-red-600">Strong Buy</span></div>
+                    </div>
+                </div>
+
+                <div onclick="selectDistrict('B')" class="card-hover cursor-pointer relative bg-white border-2 border-gray-200 rounded-2xl p-6 overflow-hidden hover:border-blue-500">
+                    <h3 class="text-2xl font-bold text-gray-800">📍 District B (Bang Sue)</h3>
+                    <p class="text-gray-500 text-sm mb-4">Transportation Hub</p>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between border-b pb-1">
+                            <span>Avg Price:</span>
+                            <span class="font-bold text-blue-600">95,000 / sq.m.</span>
+                        </div>
+                        <div class="flex justify-between border-b pb-1">
+                            <span>5-Year Growth:</span>
+                            <span class="font-bold text-blue-600">+15% 🐢</span>
+                        </div>
+                        <div class="flex justify-between border-b pb-1">
+                            <span>Avg Yield:</span>
+                            <span class="font-bold text-gray-600">5.2%</span>
+                        </div>
+                    </div>
+                     <div class="mt-4 h-32 bg-gray-50 rounded flex items-end px-2 space-x-2">
+                        <div class="w-1/5 bg-blue-200 h-[40%]"></div>
+                        <div class="w-1/5 bg-blue-300 h-[45%]"></div>
+                        <div class="w-1/5 bg-blue-300 h-[48%]"></div>
+                        <div class="w-1/5 bg-blue-400 h-[50%]"></div>
+                        <div class="w-1/5 bg-blue-400 h-[52%]"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="scene-archetype" class="hidden p-8 fade-in">
+            <h2 class="text-2xl font-bold text-center mb-2">เจาะลึก: เลือก Asset ของคุณใน <span id="district-name" class="text-blue-600"></span></h2>
+            <p class="text-center text-gray-500 mb-8 text-sm">งบประมาณของคุณ: <span id="budget-display" class="font-bold text-green-600"></span> THB</p>
+
+            <div class="grid grid-cols-1 gap-4" id="archetype-container">
+                </div>
+        </section>
+
+        <section id="scene-sim" class="hidden p-10 fade-in text-center h-full flex flex-col items-center justify-center">
+            <div class="mb-8">
+                <h2 class="text-4xl font-bold mb-2">Year: <span id="sim-year">2020</span></h2>
+                <div id="event-box" class="bg-yellow-100 border-l-4 border-yellow-500 p-4 text-left w-full max-w-lg mx-auto shadow-md">
+                    <p class="font-bold text-lg text-yellow-800" id="event-title">Breaking News</p>
+                    <p class="text-gray-700" id="event-desc">Event description...</p>
+                </div>
+            </div>
+
+            <div class="w-full max-w-md bg-gray-200 rounded-full h-2.5 mb-6 dark:bg-gray-700">
+                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+
+            <div id="sim-stats" class="grid grid-cols-2 gap-8 text-left w-full max-w-lg mb-8">
+                <div class="bg-white p-4 rounded shadow">
+                    <p class="text-xs text-gray-500">Asset Price</p>
+                    <p class="text-xl font-bold" id="current-asset-price">-</p>
+                </div>
+                <div class="bg-white p-4 rounded shadow">
+                    <p class="text-xs text-gray-500">Rental Income (Acc)</p>
+                    <p class="text-xl font-bold text-green-600" id="current-rent">-</p>
+                </div>
+            </div>
+
+            <button id="next-year-btn" onclick="nextTurn()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105">
+                Start Year 2020
+            </button>
+        </section>
+
+        <section id="scene-result" class="hidden p-8 fade-in overflow-y-auto max-h-screen">
+            <h2 class="text-3xl font-bold text-center text-gray-900 mb-6">บทสรุปการลงทุนของคุณ</h2>
+            
+            <div class="bg-white border-2 border-slate-200 rounded-xl p-6 mb-8 shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">ผลประกอบการ (Net Worth)</h3>
+                    <span id="final-score" class="text-2xl font-bold"></span>
+                </div>
+                <div class="h-64">
+                    <canvas id="resultChart"></canvas>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-red-50 p-6 rounded-lg border-l-4 border-red-500">
+                    <h4 class="font-bold text-red-700 mb-2">⚠️ The Truth About Averages (ความจริงของค่าเฉลี่ย)</h4>
+                    <p class="text-sm text-gray-700 mb-2">
+                        คุณเห็นกราฟตอนแรกไหม? <b id="result-district-name"></b> มีค่าเฉลี่ยราคาสูงขึ้นจริง แต่เป็นเพราะ <span class="font-bold bg-yellow-200">"Condo Type 3 (Luxury)"</span> เพียงไม่กี่ตึกดึงราคาขึ้นไป
+                    </p>
+                    <p class="text-sm text-gray-700">
+                        ในขณะที่ <span class="font-bold bg-gray-200">"Condo Type 1 (Entry Level)"</span> ในย่านเดียวกันกลับราคาตกต่ำลงเนื่องจาก Oversupply และวิกฤตเศรษฐกิจ (K-Shaped Recovery)
+                    </p>
+                </div>
+
+                <div class="bg-green-50 p-6 rounded-lg border-l-4 border-green-500">
+                    <h4 class="font-bold text-green-700 mb-2">🎯 Archetype Strategy</h4>
+                    <p class="text-sm text-gray-700">
+                        การลงทุนที่ "ฉลาด" ไม่ใช่การซื้อย่านที่แพงที่สุด แต่คือการซื้อ <b>Archetype ที่ถูกต้องในย่านนั้นๆ</b>:
+                    </p>
+                    <ul class="list-disc ml-5 mt-2 text-sm text-gray-600 space-y-1">
+                        <li><b>ย่านห้วยขวาง (A):</b> เหมาะกับ <i>Type 3 (Prime)</i> ที่จับกลุ่ม Expat/จีน ราคาพุ่งแรง [cite: 27, 33]</li>
+                        <li><b>ย่านบางซื่อ (B):</b> เหมาะกับ <i>Type 2 (Real Demand)</i> ใกล้รถไฟฟ้า เน้นความมั่นคง</li>
+                        <li><b>ข้อผิดพลาดทั่วไป:</b> ซื้อ Type 1 ในย่าน A หวังกำไรตามค่าเฉลี่ย แต่สุดท้ายขาดทุนเพราะคู่แข่งเยอะและคนเช่าหายช่วงโควิด [cite: 9, 31]</li>
+                    </ul>
+                </div>
+            </div>
+
+            <button onclick="location.reload()" class="mt-8 w-full bg-slate-800 text-white py-4 rounded-lg font-bold hover:bg-slate-700">เล่นใหม่อีกครั้ง</button>
+        </section>
+
+    </div>
+
+    <script>
+        // --- GAME DATA ---
+        const gameData = {
+            character: null,
+            budget: 0,
+            selectedDistrict: null,
+            selectedArchetype: null,
+            currentYear: 2019,
+            endYear: 2024,
+            history: {
+                years: [],
+                playerValue: [],
+                marketAverage: []
+            },
+            asset: {
+                initialPrice: 0,
+                currentPrice: 0,
+                accRent: 0
+            }
         };
 
-        const TIMELINE = [
-        { year: 2000, event: "Baseline", eventTH: "จุดเริ่มต้น", severity: 0, priceChange: { 1: 0, 2: 0, 3: 0 }, rate: 0.035, rental: 0, vacancy: 0.08, sentiment: 50 },
-        { year: 2001, event: "Dot-com Hangover", eventTH: "ฟองสบู่ไอทีแตก", severity: 2, priceChange: { 1: -0.03, 2: -0.03, 3: -0.03 }, rate: 0.035, rental: -0.05, vacancy: 0.10, sentiment: 40 },
-        { year: 2002, event: "Slow Recovery", eventTH: "ฟื้นตัวช้าๆ", severity: 1, priceChange: { 1: 0.01, 2: 0.01, 3: 0.01 }, rate: 0.032, rental: 0, vacancy: 0.09, sentiment: 45 },
-        { year: 2003, event: "SARS Shock", eventTH: "วิกฤต SARS", severity: 3, priceChange: { 1: -0.05, 2: -0.05, 3: -0.12 }, rate: 0.032, rental: -0.10, vacancy: 0.15, sentiment: 30, unemployment: 0.06 },
-        { year: 2004, event: "MRT Launch", eventTH: "รถไฟฟ้าเปิดให้บริการ", severity: 4, priceChange: { 1: 0.08, 2: 0.12, 3: 0.18 }, rate: 0.028, rental: 0.15, vacancy: 0.06, sentiment: 70, boom: true },
-        { year: 2005, event: "Golden Age", eventTH: "ยุคทอง เริ่มต้น", severity: 5, priceChange: { 1: 0.12, 2: 0.15, 3: 0.20 }, rate: 0.025, rental: 0.10, vacancy: 0.05, sentiment: 85, boom: true },
-        { year: 2006, event: "Boom Continues", eventTH: "บูมต่อเนื่อง", severity: 5, priceChange: { 1: 0.12, 2: 0.15, 3: 0.20 }, rate: 0.025, rental: 0.10, vacancy: 0.04, sentiment: 90, boom: true },
-        { year: 2007, event: "Peak Euphoria", eventTH: "จุดสูงสุด หลงใหล", severity: 5, priceChange: { 1: 0.12, 2: 0.15, 3: 0.20 }, rate: 0.025, rental: 0.10, vacancy: 0.04, sentiment: 95, boom: true },
-        { year: 2008, event: "Lehman Crash", eventTH: "วิกฤต Lehman Brothers", severity: 5, priceChange: { 1: -0.18, 2: -0.12, 3: -0.25 }, rate: 0.045, rental: -0.20, vacancy: 0.18, sentiment: 15, unemployment: 0.10, crash: true },
-        { year: 2009, event: "Stimulus Recovery", eventTH: "กระตุ้นเศรษฐกิจ", severity: 3, priceChange: { 1: 0.05, 2: 0.08, 3: -0.05 }, rate: 0.030, rental: 0.05, vacancy: 0.12, sentiment: 40 },
-        { year: 2010, event: "Rebuild Phase", eventTH: "ระยะฟื้นฟู", severity: 2, priceChange: { 1: 0.07, 2: 0.09, 3: 0.10 }, rate: 0.030, rental: 0.06, vacancy: 0.09, sentiment: 55 },
-        { year: 2011, event: "Steady Growth", eventTH: "เติบโตมั่นคง", severity: 2, priceChange: { 1: 0.07, 2: 0.09, 3: 0.10 }, rate: 0.032, rental: 0.06, vacancy: 0.08, sentiment: 60 },
-        { year: 2012, event: "Steady Growth", eventTH: "เติบโตมั่นคง", severity: 2, priceChange: { 1: 0.07, 2: 0.09, 3: 0.10 }, rate: 0.030, rental: 0.06, vacancy: 0.07, sentiment: 60 },
-        { year: 2013, event: "Political Noise", eventTH: "เสียงทางการเมือง", severity: 2, priceChange: { 1: 0.07, 2: 0.09, 3: 0.10 }, rate: 0.033, rental: 0.06, vacancy: 0.07, sentiment: 55 },
-        { year: 2014, event: "Coup Shock", eventTH: "รัฐประหาร", severity: 3, priceChange: { 1: -0.05, 2: -0.05, 3: -0.05 }, rate: 0.035, rental: 0, vacancy: 0.10, sentiment: 35 },
-        { year: 2015, event: "Chinese Boom", eventTH: "คลื่นลูกใหม่จีน", severity: 4, priceChange: { 1: 0.05, 2: 0.08, 3: 0.25 }, rate: 0.032, rental: 0.12, vacancy: 0.05, sentiment: 75, boom: true },
-        { year: 2016, event: "Supply Warnings", eventTH: "สัญญาณอุปทานล้น", severity: 2, priceChange: { 1: 0.02, 2: 0.05, 3: 0.15 }, rate: 0.035, rental: 0.03, vacancy: 0.09, sentiment: 65 },
-        { year: 2017, event: "Overhang Begins", eventTH: "อุปทานเริ่มล้น", severity: 2, priceChange: { 1: 0.02, 2: 0.05, 3: 0.15 }, rate: 0.035, rental: 0.03, vacancy: 0.09, sentiment: 60 },
-        { year: 2018, event: "LTV Crackdown", eventTH: "ธปท.เข้มงวด LTV", severity: 3, priceChange: { 1: -0.03, 2: 0.01, 3: 0.08 }, rate: 0.038, rental: 0, vacancy: 0.11, sentiment: 45 },
-        { year: 2019, event: "Sideways Grind", eventTH: "ราบเรียบ ไร้ทิศทาง", severity: 2, priceChange: { 1: -0.02, 2: 0.01, 3: 0.03 }, rate: 0.038, rental: -0.02, vacancy: 0.12, sentiment: 40 },
-        { year: 2020, event: "COVID Crash", eventTH: "วิกฤต COVID-19", severity: 5, priceChange: { 1: -0.08, 2: -0.05, 3: -0.35 }, rate: 0.025, rental: -0.25, vacancy: 0.25, sentiment: 10, unemployment: 0.15, crash: true },
-        { year: 2021, event: "K-Shaped Recovery", eventTH: "ฟื้นแบบเหลื่อมล้ำ", severity: 3, priceChange: { 1: -0.03, 2: 0.02, 3: 0.40 }, rate: 0.025, rental: -0.10, vacancy: 0.18, sentiment: 50 },
-        { year: 2022, event: "Rate Shock", eventTH: "ดอกเบี้ยพุ่ง", severity: 4, priceChange: { 1: -0.05, 2: -0.02, 3: 0.05 }, rate: 0.045, rental: 0.03, vacancy: 0.15, sentiment: 35 },
-        { year: 2023, event: "China Reopening", eventTH: "จีนเปิดประเทศ", severity: 2, priceChange: { 1: 0, 2: 0.02, 3: 0.08 }, rate: 0.040, rental: 0.05, vacancy: 0.12, sentiment: 55 },
-        { year: 2024, event: "Consolidation", eventTH: "รวมตัวใหม่", severity: 1, priceChange: { 1: 0.01, 2: 0.03, 3: 0.05 }, rate: 0.040, rental: 0.02, vacancy: 0.10, sentiment: 50 },
-        { year: 2025, event: "Orange Line Opens", eventTH: "สายสีส้มเปิด", severity: 4, priceChange: { 1: 0.05, 2: 0.10, 3: 0.15 }, rate: 0.038, rental: 0.08, vacancy: 0.08, sentiment: 70, boom: true }
-        ];
-
-        const PROPERTY_TYPES = {
-        1: { name: "Entry Level", nameTH: "เน้นเข้าถึงง่าย", emoji: "🏢", basePrice: 40000, sqm: 25, baseRent: 350, color: "blue" },
-        2: { name: "Real Demand", nameTH: "เน้นสมดุล", emoji: "🏠", basePrice: 55000, sqm: 32, baseRent: 450, color: "green" },
-        3: { name: "Prime & Prestige", nameTH: "เน้นหรูหรา", emoji: "🏰", basePrice: 80000, sqm: 50, baseRent: 600, color: "purple" }
-        };
-
-        const LIFE_EVENTS = [
-        { type: "bonus", name: "โบนัสพิเศษ", emoji: "🎁", probability: 0.10, calcAmount: (s) => s * 2, impact: "positive" },
-        { type: "inheritance", name: "ได้มรดกเพิ่ม", emoji: "💰", probability: 0.02, calcAmount: () => 500000 + Math.random() * 1000000, impact: "positive" },
-        { type: "promotion", name: "เลื่อนตำแหน่ง", emoji: "🚀", probability: 0.08, salaryBoost: 1.15, impact: "positive" },
-        { type: "job_loss", name: "ถูกเลิกจ้าง", emoji: "😢", probability: 0.02, duration: 6, impact: "negative" },
-        { type: "medical", name: "ค่ารักษาพยาบาล", emoji: "🏥", probability: 0.03, calcAmount: () => 50000 + Math.random() * 200000, impact: "negative" },
-        { type: "fraud", name: "โดนหลอกลงทุน", emoji: "🚨", probability: 0.01, calcAmount: (c) => c * 0.2, impact: "negative" },
-        { type: "maintenance", name: "ซ่อมนิติบุคคลฉุกเฉิน", emoji: "🔧", probability: 0.03, calcAmount: () => 50000 + Math.random() * 100000, impact: "negative" },
-        { type: "windfall", name: "โชคลาภ ลุ้นรางวัล", emoji: "🎰", probability: 0.01, calcAmount: () => 100000 + Math.random() * 500000, impact: "positive" }
-        ];
-
-        function Game() {
-        const [gameState, setGameState] = useState(null);
-        const [selectedArchetype, setSelectedArchetype] = useState(null);
-        const [showBuyModal, setShowBuyModal] = useState(false);
-        const [showSellModal, setShowSellModal] = useState(false);
-        const [showStressTest, setShowStressTest] = useState(false);
-        const [showAnalytics, setShowAnalytics] = useState(false);
-        const [showLifeEvent, setShowLifeEvent] = useState(null);
-        const [logs, setLogs] = useState([]);
-        const [autoPlay, setAutoPlay] = useState(false);
-
-        useEffect(() => {
-            if (autoPlay && gameState && gameState.yearIndex < TIMELINE.length - 1) {
-            const timer = setTimeout(() => nextYear(), 1500);
-            return () => clearTimeout(timer);
-            }
-        }, [autoPlay, gameState]);
-
-        const addLog = (msg, type = "info") => {
-            setLogs(prev => [...prev, { msg, type, timestamp: Date.now() }]);
-        };
-
-        const initGame = (archetypeKey) => {
-            const arch = ARCHETYPES[archetypeKey];
-            const startCash = arch.startSalary * 12 * arch.savingRate * 2;
-            setGameState({
-            year: 2000,
-            yearIndex: 0,
-            archetype: archetypeKey,
-            salary: arch.startSalary,
-            cash: startCash,
-            properties: [],
-            totalDebt: 0,
-            netWorth: startCash,
-            panicCounter: 0,
-            unemploymentMonths: 0,
-            totalRentalIncome: 0,
-            totalInterestPaid: 0,
-            lifeEvents: [],
-            achievements: [],
-            forcedSales: 0,
-            panicSales: 0
-            });
-            setLogs([]);
-            addLog(`${arch.emoji} เริ่มเกม: ${arch.nameTH}`, "success");
-            addLog(`💰 เงินสดเริ่มต้น: ${(startCash/1000).toFixed(0)}K บาท`, "info");
-        };
-
-        const buyProperty = (type) => {
-            const arch = ARCHETYPES[gameState.archetype];
-            const market = TIMELINE[gameState.yearIndex];
-            const propData = PROPERTY_TYPES[type];
-            
-            if (arch.startBuyingYear && gameState.year < arch.startBuyingYear) {
-            addLog(`⏸️ ยังไม่ถึงเวลา (รอถึงปี ${arch.startBuyingYear})`, "warning");
-            return;
-            }
-
-            const price = propData.basePrice * propData.sqm;
-            const downPayment = price * 0.20;
-            const loanAmount = price * 0.80;
-            
-            const mortgageType = arch.mortgagePreference;
-            let mortgageRate = market.rate;
-            if (mortgageType === "fixed") mortgageRate += 0.005;
-            if (mortgageType === "hybrid") mortgageRate += 0.002;
-            
-            const monthlyPayment = (loanAmount * mortgageRate) / 12 + (loanAmount / (30 * 12));
-            const dti = (monthlyPayment * 12) / (gameState.salary * 12);
-
-            if (gameState.cash < downPayment) {
-            addLog(`❌ เงินไม่พอ! ต้องการ ${(downPayment/1000).toFixed(0)}K`, "error");
-            return;
-            }
-
-            if (dti > arch.dtiThreshold) {
-            addLog(`❌ DTI เกินไป! ${(dti*100).toFixed(1)}% (จำกัด ${(arch.dtiThreshold*100).toFixed(0)}%)`, "error");
-            return;
-            }
-
-            const existingCount = gameState.properties.length;
-            let maxLTV = 0.90;
-            if (gameState.year >= 2018) {
-            if (existingCount === 1) maxLTV = 0.70;
-            if (existingCount >= 2) maxLTV = 0.50;
-            }
-
-            if (0.80 > maxLTV) {
-            addLog(`❌ LTV เกิน! (Max ${(maxLTV*100).toFixed(0)}% หลังที่ ${existingCount + 1})`, "error");
-            return;
-            }
-
-            const newProperty = {
-            id: Date.now(),
-            type,
-            purchaseYear: gameState.year,
-            purchasePrice: price,
-            currentValue: price,
-            debt: loanAmount,
-            monthlyPayment,
-            mortgageType,
-            rate: mortgageRate,
-            rentPerMonth: propData.baseRent * propData.sqm * 0.9,
-            isRented: Math.random() > market.vacancy,
-            age: 0,
-            maintenancePaid: 0
-            };
-
-            setGameState(prev => ({
-            ...prev,
-            cash: prev.cash - downPayment,
-            properties: [...prev.properties, newProperty],
-            totalDebt: prev.totalDebt + loanAmount
-            }));
-
-            addLog(`✅ ซื้อ Type ${type} ${propData.emoji} ราคา ${(price/1000).toFixed(0)}K (${mortgageType})`, "success");
-            setShowBuyModal(false);
-        };
-
-        const sellProperty = (propId) => {
-            const prop = gameState.properties.find(p => p.id === propId);
-            if (!prop) return;
-
-            const salePrice = prop.currentValue * 0.98;
-            const proceeds = salePrice - prop.debt;
-            const capitalGain = salePrice - prop.purchasePrice;
-            const holdYears = gameState.year - prop.purchaseYear;
-            
-            let tax = 0;
-            if (holdYears < 5 && capitalGain > 0) {
-            tax = capitalGain * 0.15;
-            }
-
-            const netProceeds = proceeds - tax;
-
-            setGameState(prev => ({
-            ...prev,
-            cash: prev.cash + netProceeds,
-            properties: prev.properties.filter(p => p.id !== propId),
-            totalDebt: prev.totalDebt - prop.debt
-            }));
-
-            const profitPercent = ((salePrice - prop.purchasePrice) / prop.purchasePrice * 100).toFixed(1);
-            addLog(`💰 ขาย Type ${prop.type} กำไร ${profitPercent}% | รับ ${(netProceeds/1000).toFixed(0)}K`, 
-                capitalGain > 0 ? "success" : "warning");
-            setShowSellModal(false);
-        };
-
-        const runStressTest = () => {
-            const market = TIMELINE[gameState.yearIndex];
-            const stressRate = market.rate + 0.02;
-            const newMonthlyPayments = gameState.properties.reduce((sum, p) => {
-            if (p.mortgageType === "floating") {
-                return sum + (p.debt * stressRate / 12) + (p.debt / (30 * 12));
-            }
-            return sum + p.monthlyPayment;
-            }, 0);
-            
-            const stressedDSR = (newMonthlyPayments * 12) / (gameState.salary * 12);
-            const stressedIncome = gameState.salary * 0.80;
-            const dsr2 = (newMonthlyPayments * 12) / (stressedIncome * 12);
-            
-            const totalValue = gameState.properties.reduce((sum, p) => sum + p.currentValue, 0);
-            const stressedPropertyValue = totalValue * 0.70;
-            const stressedEquity = stressedPropertyValue - gameState.totalDebt;
-            const stressedLTV = totalValue > 0 ? gameState.totalDebt / stressedPropertyValue : 0;
-
-            return {
-            scenario1_dsr: stressedDSR,
-            scenario2_dsr: dsr2,
-            scenario3_ltv: stressedLTV,
-            scenario3_equity: stressedEquity,
-            canSurvive: gameState.cash > (gameState.salary * 6) && stressedDSR < 0.60
-            };
-        };
-
-        const nextYear = () => {
-            if (gameState.yearIndex >= TIMELINE.length - 1) {
-            addLog(`🏁 จบเกม! มูลค่าสุทธิ: ${(gameState.netWorth/1000000).toFixed(2)}M บาท`, "success");
-            calculateFinalScore();
-            setAutoPlay(false);
-            return;
-            }
-
-            const arch = ARCHETYPES[gameState.archetype];
-            const nextMarket = TIMELINE[gameState.yearIndex + 1];
-            
-            // Inheritance
-            let inheritanceCash = 0;
-            if (arch.inheritanceYears && arch.inheritanceYears.includes(nextMarket.year)) {
-            const idx = arch.inheritanceYears.indexOf(nextMarket.year);
-            inheritanceCash = arch.inheritanceAmount[idx];
-            addLog(`💎 ได้รับมรดก ${(inheritanceCash/1000000).toFixed(1)}M บาท!`, "success");
-            }
-
-            // Salary update
-            let newSalary = gameState.salary;
-            if (gameState.unemploymentMonths > 0) {
-            const remaining = gameState.unemploymentMonths - 12;
-            if (remaining <= 0) {
-                newSalary = gameState.salary * 0.90;
-                addLog(`💼 หางานใหม่! เงินเดือน ${(newSalary/1000).toFixed(0)}K`, "success");
-            }
-            setGameState(prev => ({ ...prev, unemploymentMonths: Math.max(0, remaining) }));
-            } else {
-            newSalary = gameState.salary * (1 + arch.salaryGrowth);
-            if (arch.volatileIncome) {
-                const volatility = (Math.random() - 0.5) * 0.6;
-                newSalary *= (1 + volatility);
-            }
-            if (nextMarket.unemployment && nextMarket.unemployment > 0.08) {
-                newSalary *= 0.97;
-            }
-            }
-
-            // Life events
-            let lifeEventCash = inheritanceCash;
-            let newLifeEvents = [];
-            LIFE_EVENTS.forEach(event => {
-            let adjustedProb = event.probability;
-            
-            if (event.type === "job_loss" && nextMarket.unemployment) {
-                adjustedProb = event.probability * (nextMarket.unemployment / 0.05);
-            }
-            
-            if (nextMarket.boom && event.type === "bonus") {
-                adjustedProb *= 2;
-            }
-            
-            if (Math.random() < adjustedProb) {
-                if (event.type === "bonus") {
-                const bonus = event.calcAmount(gameState.salary);
-                lifeEventCash += bonus;
-                newLifeEvents.push({ ...event, amount: bonus });
-                addLog(`${event.emoji} ${event.name} +${(bonus/1000).toFixed(0)}K`, "success");
-                } else if (event.type === "medical") {
-                const cost = event.calcAmount();
-                lifeEventCash -= cost;
-                newLifeEvents.push({ ...event, amount: cost });
-                addLog(`${event.emoji} ${event.name} -${(cost/1000).toFixed(0)}K`, "warning");
-                } else if (event.type === "promotion") {
-                newSalary *= event.salaryBoost;
-                newLifeEvents.push({ ...event });
-                addLog(`${event.emoji} ${event.name} +${((event.salaryBoost - 1) * 100).toFixed(0)}%`, "success");
-                } else if (event.type === "job_loss" && gameState.unemploymentMonths === 0) {
-                setGameState(prev => ({ ...prev, unemploymentMonths: event.duration }));
-                newLifeEvents.push({ ...event });
-                addLog(`${event.emoji} ${event.name} (${event.duration} เดือน)`, "error");
-                } else if (event.type === "windfall") {
-                const amount = event.calcAmount();
-                lifeEventCash += amount;
-                newLifeEvents.push({ ...event, amount });
-                addLog(`${event.emoji} ${event.name} +${(amount/1000).toFixed(0)}K`, "success");
+        const archetypesData = {
+            'A': [ // Huai Khwang (High Volatility, K-Shape)
+                {
+                    id: 'A1',
+                    name: 'Type 1: Entry Level (Deep Soi)',
+                    desc: 'คอนโดเล็กในซอยลึก เน้นปล่อยเช่าราคาถูก',
+                    price: 2200000,
+                    yield: 0.055,
+                    tags: ['High Risk', 'Mass Market'],
+                    volatility: 'high', // Crashes hard in crisis
+                    baseGrowth: 0.01
+                },
+                {
+                    id: 'A2',
+                    name: 'Type 2: Real Demand',
+                    desc: 'คอนโดมาตรฐาน เดินถึง MRT ได้',
+                    price: 4500000,
+                    yield: 0.045,
+                    tags: ['Stable', 'White Collar'],
+                    volatility: 'medium',
+                    baseGrowth: 0.03
+                },
+                {
+                    id: 'A3',
+                    name: 'Type 3: Prime & Prestige',
+                    desc: 'Luxury ติดถนนใหญ่/MRT เน้น Expat',
+                    price: 12000000,
+                    yield: 0.04,
+                    tags: ['Capital Gain', 'Scarce'],
+                    volatility: 'k-shape', // Moons in recovery
+                    baseGrowth: 0.06
                 }
-            }
+            ],
+            'B': [ // Bang Sue (Steady, Boring)
+                {
+                    id: 'B1',
+                    name: 'Type 1: Budget Condo',
+                    desc: 'คอนโดราคาประหยัดรอบนอก',
+                    price: 1800000,
+                    yield: 0.05,
+                    tags: ['Low Entry'],
+                    volatility: 'medium',
+                    baseGrowth: 0.02
+                },
+                {
+                    id: 'B2',
+                    name: 'Type 2: Transport Hub',
+                    desc: 'ใกล้สถานีกลางฯ เดินทางสะดวก',
+                    price: 3500000,
+                    yield: 0.048,
+                    tags: ['Growth Potential'],
+                    volatility: 'low', // Very resilient
+                    baseGrowth: 0.04
+                }
+            ]
+        };
+
+        const events = {
+            2020: { title: "COVID-19 Pandemic 🦠", desc: "วิกฤตโรคระบาด! ต่างชาติหาย คนตกงาน Demand หดตัวรุนแรง", effect: "CRASH" },
+            2021: { title: "Supply Glut & LTV 🔥", desc: "ของเหลือขายบานเบอะ แบงค์ชาติเข้มงวดสินเชื่อ", effect: "STAGNATE" },
+            2022: { title: "Recovery Signs 🌤️", desc: "เริ่มเปิดประเทศ จีนเริ่มส่งสัญญาณกลับมา", effect: "RECOVERY" },
+            2023: { title: "The K-Shaped Boom 📈", desc: "เศรษฐกิจฟื้นแบบเหลื่อมล้ำ ของหรูขายดี ของถูกซึมยาว", effect: "K-BOOM" },
+            2024: { title: "New Normal 🏁", desc: "สรุปผลประกอบการเข้าสู่ยุคใหม่", effect: "NORMAL" }
+        };
+
+        // --- FUNCTIONS ---
+
+        function show(id) {
+            document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function updateStatus() {
+            document.getElementById('status-bar').classList.remove('hidden');
+            document.getElementById('cash-display').innerText = gameData.budget.toLocaleString();
+            document.getElementById('year-display').innerText = gameData.currentYear;
+        }
+
+        function selectCharacter(role) {
+            if(role === 'junior') gameData.budget = 2500000;
+            if(role === 'manager') gameData.budget = 6000000;
+            if(role === 'exec') gameData.budget = 15000000;
+            
+            gameData.character = role;
+            updateStatus();
+            show('scene-map');
+        }
+
+        function selectDistrict(d) {
+            gameData.selectedDistrict = d;
+            const districtName = d === 'A' ? 'Huai Khwang (The Star)' : 'Bang Sue (The Value)';
+            document.getElementById('district-name').innerText = districtName;
+            
+            // Render Archetypes based on Budget
+            const container = document.getElementById('archetype-container');
+            container.innerHTML = '';
+            
+            const options = archetypesData[d];
+            let hasOption = false;
+
+            options.forEach(opt => {
+                const isAffordable = gameData.budget >= opt.price;
+                const opacity = isAffordable ? 'opacity-100' : 'opacity-50 cursor-not-allowed';
+                const btnState = isAffordable ? `onclick="buyArchetype('${opt.id}')"` : 'disabled';
+                const affordText = isAffordable ? '<span class="text-green-600 font-bold">ซื้อได้</span>' : '<span class="text-red-500 font-bold">เงินไม่พอ</span>';
+
+                if(isAffordable) hasOption = true;
+
+                const html = `
+                <div class="bg-white border rounded-xl p-4 flex justify-between items-center shadow-sm ${opacity} hover:shadow-md transition">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-lg">${opt.name}</h3>
+                            ${opt.tags.map(t => `<span class="text-xs bg-gray-200 px-2 py-1 rounded text-gray-600">${t}</span>`).join('')}
+                        </div>
+                        <p class="text-sm text-gray-500">${opt.desc}</p>
+                        <p class="mt-1 font-mono">ราคา: ${opt.price.toLocaleString()} THB | Yield: ${(opt.yield*100).toFixed(1)}%</p>
+                    </div>
+                    <div class="text-right">
+                        ${affordText}
+                        <button ${btnState} class="block mt-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:bg-gray-400">เลือก</button>
+                    </div>
+                </div>`;
+                container.innerHTML += html;
             });
 
-            const annualIncome = gameState.unemploymentMonths > 0 ? 0 : newSalary * 12;
-            const annualSavings = annualIncome * arch.savingRate;
-
-            let newProperties = gameState.properties.map(prop => {
-            const priceMultiplier = 1 + nextMarket.priceChange[prop.type];
-            let newValue = prop.currentValue * priceMultiplier;
-            
-            const age = nextMarket.year - prop.purchaseYear;
-            let ageMultiplier = 1.0;
-            if (age >= 5 && age < 10) ageMultiplier = 0.98;
-            else if (age >= 10 && age < 15) ageMultiplier = 0.95;
-            else if (age >= 15) ageMultiplier = 0.92;
-            
-            newValue *= ageMultiplier;
-            
-            const rentMultiplier = 1 + nextMarket.rental;
-            const newRent = prop.rentPerMonth * rentMultiplier;
-            
-            const isRented = prop.isRented ? (Math.random() > 0.05) : (Math.random() > nextMarket.vacancy);
-            const annualRent = isRented ? newRent * 12 : 0;
-            
-            let newMortgagePayment = prop.monthlyPayment;
-            if (prop.mortgageType === "floating") {
-                newMortgagePayment = (prop.debt * nextMarket.rate / 12) + (prop.debt / (30 * 12));
+            if(!hasOption) {
+                alert("งบประมาณคุณไม่พอสำหรับย่านนี้! กรุณาเลือกย่านอื่น หรือเลือกตัวละครใหม่");
+                return;
             }
 
-            return {
-                ...prop,
-                currentValue: newValue,
-                rentPerMonth: newRent,
-                annualRent,
-                isRented,
-                monthlyPayment: newMortgagePayment,
-                age
-            };
-            });
+            show('scene-archetype');
+            document.getElementById('budget-display').innerText = gameData.budget.toLocaleString();
+        }
 
-            const totalRent = newProperties.reduce((sum, p) => sum + (p.annualRent || 0), 0);
-            const totalMortgage = newProperties.reduce((sum, p) => sum + p.monthlyPayment * 12, 0);
-            const totalMaintenance = newProperties.reduce((sum, p) => sum + (p.currentValue * 0.005), 0);
-            const totalInterest = newProperties.reduce((sum, p) => sum + (p.debt * p.rate), 0);
+        function buyArchetype(id) {
+            const districtOpts = archetypesData[gameData.selectedDistrict];
+            const selected = districtOpts.find(o => o.id === id);
             
-            const netCashFlow = annualSavings + totalRent - totalMortgage - totalMaintenance + lifeEventCash;
-
-            let newCash = gameState.cash + netCashFlow;
-            let forcedSaleCount = 0;
+            gameData.selectedArchetype = selected;
+            gameData.asset.initialPrice = selected.price;
+            gameData.asset.currentPrice = selected.price;
+            gameData.asset.accRent = 0;
             
-            while (newCash < 0 && newProperties.length > 0) {
-            newProperties.sort((a, b) => (b.currentValue - b.purchasePrice) - (a.currentValue - a.purchasePrice));
-            const soldProp = newProperties[newProperties.length - 1];
-            const salePrice = soldProp.currentValue * 0.85;
-            const proceeds = salePrice - soldProp.debt;
-            newProperties = newProperties.slice(0, -1);
-            newCash += proceeds;
-            forcedSaleCount++;
-            addLog(`🚨 ขายขาดทุน! Type ${soldProp.type} ได้เงิน ${(proceeds/1000).toFixed(0)}K`, "error");
-            }
+            // Initial Chart Data
+            gameData.history.years.push(2019);
+            gameData.history.playerValue.push(selected.price);
+            
+            show('scene-sim');
+            updateSimUI();
+        }
 
-            let newPanicCounter = gameState.panicCounter;
-            let panicSaleCount = 0;
-            if (nextMarket.severity === 5 && nextMarket.priceChange[1] < 0) {
-            newPanicCounter++;
-            if (newPanicCounter >= arch.panicThreshold && newProperties.length > 0) {
-                const soldProp = newProperties[newProperties.length - 1];
-                const salePrice = soldProp.currentValue * 0.90;
-                const proceeds = salePrice - soldProp.debt;
-                newProperties = newProperties.slice(0, -1);
-                newCash += proceeds;
-                panicSaleCount++;
-                addLog(`😱 ขายตื่นตระหนก! Type ${soldProp.type}`, "warning");
-            }
+        function updateSimUI() {
+            document.getElementById('sim-year').innerText = gameData.currentYear;
+            document.getElementById('current-asset-price').innerText = Math.round(gameData.asset.currentPrice).toLocaleString();
+            document.getElementById('current-rent').innerText = Math.round(gameData.asset.accRent).toLocaleString();
+            
+            if (gameData.currentYear < gameData.endYear) {
+                const evt = events[gameData.currentYear + 1]; // Preview next event or current? Let's show current year logic
+                // Logic: Click button -> Advance Year -> Show what happened
+                document.getElementById('next-year-btn').innerText = `Advance to ${gameData.currentYear + 1}`;
+                document.getElementById('event-box').classList.add('hidden'); // Hide until processed
             } else {
-            newPanicCounter = 0;
+                document.getElementById('next-year-btn').innerText = "See Results";
             }
-
-            const totalValue = newProperties.reduce((sum, p) => sum + p.currentValue, 0);
-            const totalDebt = newProperties.reduce((sum, p) => sum + p.debt, 0);
-            const newNetWorth = newCash + totalValue - totalDebt;
-
-            const newAchievements = [...gameState.achievements];
-            if (newProperties.length >= 3 && !newAchievements.includes("empire")) {
-            newAchievements.push("empire");
-            addLog(`🏆 Achievement: Rental Empire`, "success");
-            }
-            if (newNetWorth > 10000000 && !newAchievements.includes("10m")) {
-            newAchievements.push("10m");
-            addLog(`🏆 Achievement: มูลค่า 10M+`, "success");
-            }
-            if (forcedSaleCount === 0 && nextMarket.year === 2009 && gameState.properties.length > 0 && !newAchievements.includes("survivor_2008")) {
-            newAchievements.push("survivor_2008");
-            addLog(`🏆 Achievement: รอดวิกฤต 2008`, "success");
-            }
-
-            setGameState(prev => ({
-            ...prev,
-            year: nextMarket.year,
-            yearIndex: prev.yearIndex + 1,
-            salary: newSalary,
-            cash: newCash,
-            properties: newProperties,
-            totalDebt,
-            netWorth: newNetWorth,
-            panicCounter: newPanicCounter,
-            totalRentalIncome: prev.totalRentalIncome + totalRent,
-            totalInterestPaid: prev.totalInterestPaid + totalInterest,
-            lifeEvents: newLifeEvents,
-            achievements: newAchievements,
-            forcedSales: prev.forcedSales + forcedSaleCount,
-            panicSales: prev.panicSales + panicSaleCount
-            }));
-
-            if (newLifeEvents.length > 0) {
-            setShowLifeEvent(newLifeEvents[0]);
-            setTimeout(() => setShowLifeEvent(null), 3000);
-            }
-
-            addLog(`📅 ${nextMarket.year}: ${nextMarket.eventTH}`, "info");
-        };
-
-        const calculateFinalScore = () => {
-            const arch = ARCHETYPES[gameState.archetype];
-            const startCapital = arch.startSalary * 12 * arch.savingRate * 2;
-            const roi = ((gameState.netWorth - startCapital) / startCapital) * 100;
-            
-            let grade = "F";
-            if (gameState.netWorth > 50000000) grade = "S";
-            else if (gameState.netWorth > 25000000) grade = "A+";
-            else if (gameState.netWorth > 15000000) grade = "A";
-            else if (gameState.netWorth > 10000000) grade = "B";
-            else if (gameState.netWorth > 5000000) grade = "C";
-            else if (gameState.netWorth > 2000000) grade = "D";
-            
-            addLog(`📊 Final Grade: ${grade} | ROI: ${roi.toFixed(0)}%`, "success");
-        };
-
-        if (!selectedArchetype) {
-            return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white p-4">
-                <div className="max-w-6xl mx-auto py-8">
-                <div className="text-center mb-12">
-                    <h1 className="text-5xl font-bold mb-4">🏢 Huai Khwang Property Game</h1>
-                    <p className="text-2xl text-purple-200 mb-2">The Sims meets Real Estate Investment</p>
-                    <p className="text-lg text-purple-300">2000-2025 | 26 ปีแห่งความท้าทาย</p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {Object.entries(ARCHETYPES).map(([key, arch]) => (
-                    <div
-                        key={key}
-                        onClick={() => {
-                        setSelectedArchetype(key);
-                        initGame(key);
-                        }}
-                        className="bg-white/10 backdrop-blur-lg p-6 rounded-xl cursor-pointer hover:bg-white/20 hover:scale-105 transition-all border-2 border-white/20 hover:border-white/40"
-                    >
-                        <div className="text-6xl mb-4 text-center">{arch.emoji}</div>
-                        <h3 className="text-xl font-bold mb-2 text-center">{arch.nameTH}</h3>
-                        <p className="text-sm text-gray-300 mb-4 text-center italic">{arch.desc}</p>
-                        <div className="text-sm space-y-2 bg-black/20 p-3 rounded">
-                        <div className="flex justify-between">
-                            <span>เงินเดือน:</span>
-                            <span className="font-bold">{arch.startSalary.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>ความเสี่ยง:</span>
-                            <span className="font-bold">{"⭐".repeat(arch.riskAppetite)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>อัตราออม:</span>
-                            <span className="font-bold">{(arch.savingRate*100).toFixed(0)}%</span>
-                        </div>
-                        </div>
-                        <div className="mt-4 text-xs text-gray-400 text-center">{arch.personality}</div>
-                    </div>
-                    ))}
-                </div>
-                </div>
-            </div>
-            );
         }
 
-        if (!gameState) return null;
+        function nextTurn() {
+            if(gameData.currentYear >= gameData.endYear) {
+                finishGame();
+                return;
+            }
 
-        const arch = ARCHETYPES[gameState.archetype];
-        const market = TIMELINE[gameState.yearIndex];
-        const totalValue = gameState.properties.reduce((sum, p) => sum + p.currentValue, 0);
-        const currentDSR = gameState.properties.length > 0 
-            ? (gameState.properties.reduce((sum, p) => sum + p.monthlyPayment * 12, 0) / (gameState.salary * 12))
-            : 0;
-        const currentLTV = totalValue > 0 ? (gameState.totalDebt / totalValue) : 0;
+            gameData.currentYear++;
+            const evt = events[gameData.currentYear];
+            
+            // --- CORE SIMULATION LOGIC ---
+            const arch = gameData.selectedArchetype;
+            let priceChange = 0;
+            let rentCollection = 0;
 
-        const sentimentColor = market.sentiment > 70 ? "green" : market.sentiment > 40 ? "yellow" : "red";
-        const sentimentEmoji = market.sentiment > 70 ? "😄" : market.sentiment > 40 ? "😐" : "😰";
+            // 1. Base Growth
+            priceChange += arch.baseGrowth;
 
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white p-4">
-            <div className="max-w-7xl mx-auto">
-                
-                {/* Top Bar - Sims Style */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 mb-4 shadow-2xl border-2 border-white/20">
-                <div className="flex justify-between items-center flex-wrap gap-4">
-                    <div className="flex items-center gap-4">
-                    <div className="text-6xl">{arch.emoji}</div>
-                    <div>
-                        <h2 className="text-3xl font-bold">{arch.nameTH}</h2>
-                        <p className="text-blue-200 text-lg">ปี {gameState.year} | {market.eventTH}</p>
-                        <div className="flex gap-2 items-center mt-1">
-                        <span className="text-2xl">{sentimentEmoji}</span>
-                        <span className="text-sm">ตลาด: {market.sentiment}/100</span>
-                        </div>
-                    </div>
-                    </div>
-                    <div className="text-right">
-                    <p className="text-5xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                        {(gameState.netWorth/1000000).toFixed(2)}M
-                    </p>
-                    <p className="text-lg text-purple-200">มูลค่าสุทธิ</p>
-                    </div>
-                </div>
-                </div>
+            // 2. Event Impact based on Archetype Volatility
+            if (evt.effect === 'CRASH') { // COVID 2020
+                if(arch.volatility === 'high') priceChange -= 0.15; // Type 1 drops hard
+                else if(arch.volatility === 'k-shape') priceChange -= 0.05; // Luxury dips slightly
+                else priceChange -= 0.02; // Stable dips a bit
+                rentCollection = 0.5; // Occupancy drops
+            } 
+            else if (evt.effect === 'STAGNATE') { // 2021
+                if(arch.volatility === 'high') priceChange -= 0.05; // Type 1 continues to bleed
+                else if(arch.volatility === 'k-shape') priceChange += 0.10; // Luxury starts rebound (Anomaly) [cite: 65]
+                else priceChange += 0.01;
+                rentCollection = 0.7;
+            }
+            else if (evt.effect === 'K-BOOM') { // 2023
+                if(arch.volatility === 'high') priceChange -= 0.02; // Mass market still suffers debt
+                else if(arch.volatility === 'k-shape') priceChange += 0.15; // Luxury skyrockets
+                else priceChange += 0.04; // Normal growth
+                rentCollection = 0.9;
+            }
+            else { // Recovery / Normal
+                priceChange += 0.02;
+                rentCollection = 0.95;
+            }
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                <div className="bg-gradient-to-br from-green-600 to-green-800 p-4 rounded-xl shadow-lg">
-                    <DollarSign className="mb-2" size={24} />
-                    <p className="text-3xl font-bold">{(gameState.cash/1000).toFixed(0)}K</p>
-                    <p className="text-sm opacity-80">เงินสด</p>
-                </div>
-                <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-4 rounded-xl shadow-lg">
-                    <Home className="mb-2" size={24} />
-                    <p className="text-3xl font-bold">{gameState.properties.length}</p>
-                    <p className="text-sm opacity-80">คอนโด</p>
-                </div>
-                <div className="bg-gradient-to-br from-purple-600 to-purple-800 p-4 rounded-xl shadow-lg">
-                    <Briefcase className="mb-2" size={24} />
-                    <p className="text-3xl font-bold">{(gameState.salary/1000).toFixed(0)}K</p>
-                    <p className="text-sm opacity-80">เงินเดือน/เดือน</p>
-                </div>
-                <div className="bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-xl shadow-lg">
-                    <AlertTriangle className="mb-2" size={24} />
-                    <p className="text-3xl font-bold">{(gameState.totalDebt/1000000).toFixed(2)}M</p>
-                    <p className="text-sm opacity-80">หนี้</p>
-                </div>
-                </div>
+            // Apply changes
+            gameData.asset.currentPrice = gameData.asset.currentPrice * (1 + priceChange);
+            const yearlyRent = (gameData.asset.initialPrice * arch.yield) * rentCollection;
+            gameData.asset.accRent += yearlyRent;
 
-                {/* Risk Meters */}
-                <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 mb-4">
-                <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-                    <Activity size={20} /> Health Meters
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                    <div className="flex justify-between text-sm mb-1">
-                        <span>DSR</span>
-                        <span className={currentDSR > 0.50 ? 'text-red-400 font-bold' : 'text-green-400'}>
-                        {(currentDSR * 100).toFixed(1)}%
-                        </span>
-                    </div>
-                    <div className="h-2 bg-black/30 rounded-full overflow-hidden">
-                        <div 
-                        className={`h-full ${currentDSR > 0.50 ? 'bg-red-500' : 'bg-green-500'}`}
-                        style={{ width: `${Math.min(currentDSR * 100, 100)}%` }}
-                        />
-                    </div>
-                    </div>
-                    <div>
-                    <div className="flex justify-between text-sm mb-1">
-                        <span>LTV</span>
-                        <span className={currentLTV > 0.80 ? 'text-red-400 font-bold' : 'text-green-400'}>
-                        {(currentLTV * 100).toFixed(1)}%
-                        </span>
-                    </div>
-                    <div className="h-2 bg-black/30 rounded-full overflow-hidden">
-                        <div 
-                        className={`h-full ${currentLTV > 0.80 ? 'bg-red-500' : 'bg-green-500'}`}
-                        style={{ width: `${Math.min(currentLTV * 100, 100)}%` }}
-                        />
-                    </div>
-                    </div>
-                    <div>
-                    <div className="flex justify-between text-sm mb-1">
-                        <span>ดอกเบี้ย</span>
-                        <span className="font-bold">{(market.rate * 100).toFixed(2)}%</span>
-                    </div>
-                    <div className="h-2 bg-black/30 rounded-full overflow-hidden">
-                        <div 
-                        className="h-full bg-yellow-500"
-                        style={{ width: `${(market.rate / 0.05) * 100}%` }}
-                        />
-                    </div>
-                    </div>
-                    <div>
-                    <div className="flex justify-between text-sm mb-1">
-                        <span>Vacancy</span>
-                        <span className="font-bold">{(market.vacancy * 100).toFixed(0)}%</span>
-                    </div>
-                    <div className="h-2 bg-black/30 rounded-full overflow-hidden">
-                        <div 
-                        className="h-full bg-orange-500"
-                        style={{ width: `${market.vacancy * 100}%` }}
-                        />
-                    </div>
-                    </div>
-                </div>
-                </div>
+            // Record History
+            gameData.history.years.push(gameData.currentYear);
+            gameData.history.playerValue.push(gameData.asset.currentPrice);
 
-                {/* Properties Grid */}
-                <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 mb-4">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                    <Building2 size={24} /> คอนโดของคุณ
-                </h3>
-                {gameState.properties.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                    <Home size={48} className="mx-auto mb-4 opacity-50" />
-                    <p>ยังไม่มีคอนโด คลิก "ซื้อ" เพื่อเริ่มต้น!</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {gameState.properties.map(prop => {
-                        const propType = PROPERTY_TYPES[prop.type];
-                        const gainPercent = ((prop.currentValue - prop.purchasePrice) / prop.purchasePrice * 100).toFixed(1);
-                        const isUnderwater = prop.currentValue < prop.debt;
-                        return (
-                        <div key={prop.id} className={`bg-gradient-to-br from-${propType.color}-600 to-${propType.color}-800 p-4 rounded-lg relative overflow-hidden`}>
-                            <div className="absolute top-2 right-2 text-4xl opacity-20">{propType.emoji}</div>
-                            <div className="relative">
-                            <p className="font-bold text-lg mb-1">Type {prop.type} {propType.emoji}</p>
-                            <p className="text-sm opacity-80 mb-2">{propType.nameTH}</p>
-                            <div className="text-xs space-y-1 bg-black/20 p-2 rounded">
-                                <div className="flex justify-between">
-                                <span>ซื้อปี:</span>
-                                <span>{prop.purchaseYear}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                <span>อายุ:</span>
-                                <span>{prop.age} ปี</span>
-                                </div>
-                                <div className="flex justify-between">
-                                <span>มูลค่า:</span>
-                                <span>{(prop.currentValue/1000).toFixed(0)}K</span>
-                                </div>
-                                <div className="flex justify-between">
-                                <span>หนี้:</span>
-                                <span>{(prop.debt/1000).toFixed(0)}K</span>
-                                </div>
-                            </div>
-                            <div className="mt-2 flex justify-between items-center">
-                                <span className={`text-lg font-bold ${parseFloat(gainPercent) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                                {gainPercent >= 0 ? '+' : ''}{gainPercent}%
-                                </span>
-                                <span className="text-sm">
-                                {prop.isRented ? '🏠 ให้เช่า' : '🔓 ว่าง'}
-                                </span>
-                            </div>
-                            {isUnderwater && (
-                                <div className="mt-2 text-xs bg-red-500/50 px-2 py-1 rounded text-center font-bold">
-                                ⚠️ Underwater
-                                </div>
-                            )}
-                            </div>
-                        </div>
-                        );
-                    })}
-                    </div>
-                )}
-                </div>
+            // UI Update
+            document.getElementById('event-box').classList.remove('hidden');
+            document.getElementById('event-title').innerText = evt.title;
+            document.getElementById('event-desc').innerText = evt.desc;
+            
+            const progress = ((gameData.currentYear - 2019) / 5) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
 
-                {/* Action Buttons */}
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4">
-                <button
-                    onClick={() => setShowBuyModal(true)}
-                    className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 p-4 rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg"
-                >
-                    🏗️ ซื้อ
-                </button>
-                <button
-                    onClick={() => setShowSellModal(true)}
-                    disabled={gameState.properties.length === 0}
-                    className="bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 p-4 rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                    💰 ขาย
-                </button>
-                <button
-                    onClick={() => setShowStressTest(true)}
-                    className="bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 p-4 rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg"
-                >
-                    ⚡ Test
-                </button>
-                <button
-                    onClick={() => setShowAnalytics(true)}
-                    className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 p-4 rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg"
-                >
-                    📊 Stats
-                </button>
-                <button
-                    onClick={() => setAutoPlay(!autoPlay)}
-                    className={`bg-gradient-to-r ${autoPlay ? 'from-red-600 to-red-700' : 'from-pink-600 to-pink-700'} hover:opacity-90 p-4 rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg`}
-                >
-                    {autoPlay ? '⏸️ หยุด' : '▶️ Auto'}
-                </button>
-                <button
-                    onClick={nextYear}
-                    disabled={gameState.yearIndex >= TIMELINE.length - 1}
-                    className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 p-4 rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg disabled:opacity-30"
-                >
-                    ⏭️ ปีถัดไป
-                </button>
-                </div>
-
-                {/* Event Log */}
-                <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 max-h-48 overflow-y-auto">
-                <h3 className="text-lg font-bold mb-2 flex items-center gap-2 sticky top-0 bg-inherit pb-2">
-                    <Calendar size={20} /> Event Log
-                </h3>
-                {logs.slice(-20).reverse().map((log, i) => (
-                    <p key={i} className={`text-sm mb-1 ${
-                    log.type === 'error' ? 'text-red-300' :
-                    log.type === 'warning' ? 'text-yellow-300' :
-                    log.type === 'success' ? 'text-green-300' : 'text-gray-300'
-                    }`}>
-                    {log.msg}
-                    </p>
-                ))}
-                </div>
-
-                {/* Life Event Popup */}
-                {showLifeEvent && (
-                <div className="fixed top-1/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-purple-600 to-pink-600 p-6 rounded-2xl shadow-2xl border-4 border-white/30 z-50 animate-bounce">
-                    <div className="text-center">
-                    <div className="text-6xl mb-3">{showLifeEvent.emoji}</div>
-                    <h3 className="text-2xl font-bold mb-2">{showLifeEvent.name}</h3>
-                    {showLifeEvent.amount && (
-                        <p className="text-3xl font-bold">
-                        {showLifeEvent.impact === 'positive' ? '+' : '-'}
-                        {(Math.abs(showLifeEvent.amount)/1000).toFixed(0)}K
-                        </p>
-                    )}
-                    </div>
-                </div>
-                )}
-            </div>
-            </div>
-        );
+            updateSimUI();
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<Game />);
+        function finishGame() {
+            show('scene-result');
+            const totalValue = gameData.asset.currentPrice + gameData.asset.accRent;
+            const profit = totalValue - gameData.asset.initialPrice;
+            const percent = (profit / gameData.asset.initialPrice) * 100;
+
+            const scoreEl = document.getElementById('final-score');
+            scoreEl.innerText = `${percent.toFixed(1)}% (${(profit/1000000).toFixed(2)} MB)`;
+            scoreEl.className = percent > 0 ? "text-2xl font-bold text-green-600" : "text-2xl font-bold text-red-600";
+
+            document.getElementById('result-district-name').innerText = gameData.selectedDistrict === 'A' ? 'ห้วยขวาง' : 'บางซื่อ';
+
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('resultChart').getContext('2d');
+            
+            // Create Fake Market Average Data (The Average Trap)
+            // Market Avg shows steady growth (pulled up by luxury), hiding the mass market crash
+            const marketAvgData = gameData.history.playerValue.map((v, i) => {
+                const year = gameData.history.years[i];
+                if(year === 2019) return v;
+                // Fake Index: 100 -> 102 -> 105 -> 115 -> 125 (Looks good!)
+                const growthFactors = [1, 1.02, 1.05, 1.15, 1.25, 1.30]; 
+                return gameData.asset.initialPrice * growthFactors[i];
+            });
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: gameData.history.years,
+                    datasets: [{
+                        label: 'ทรัพย์สินของคุณ (Your Asset)',
+                        data: gameData.history.playerValue,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 3,
+                        fill: true
+                    },
+                    {
+                        label: 'ค่าเฉลี่ยตลาด (Market Average)',
+                        data: marketAvgData,
+                        borderColor: '#9ca3af',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + Math.round(context.raw).toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>
