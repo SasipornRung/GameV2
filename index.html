@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLACK SWAN v3.0: The HPI Paradox</title>
+    <title>BLACK SWAN v4.0: The Silent Crash</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -34,7 +34,7 @@
     <nav class="fixed top-0 left-0 w-full z-40 bg-black/95 border-b border-gray-800 p-2 flex justify-between text-xs">
         <div class="flex gap-4 items-center">
             <span class="font-bold text-green-400">SYS: ONLINE</span>
-            <span>VIX: <span class="text-red-500 animate-pulse">22.4 (HIGH)</span></span>
+            <span>VIX: <span class="text-red-500 animate-pulse">22.4</span></span>
         </div>
         <div class="flex gap-4">
             <span>CASH: <span id="hud-cash" class="text-white font-bold">0</span></span>
@@ -61,76 +61,70 @@
             <div class="terminal-border p-6 mb-6">
                 <div class="flex justify-between items-center mb-6 border-b border-gray-800 pb-2">
                     <h2 class="text-sm font-bold flex items-center gap-2">
-                        <span class="text-xl">📈</span> MARKET GROWTH DATA (5-YEAR)
+                        <span class="text-xl">📈</span> MARKET INTELLIGENCE (5-YEAR DATA)
                     </h2>
-                    <span class="text-[9px] text-gray-500 bg-gray-900 px-2 py-1">SOURCE: BOT / PROP TECH</span>
+                    <span class="text-[9px] text-gray-500 bg-gray-900 px-2 py-1">SOURCE: PROPRIETARY FEED</span>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     
-                    <div class="border border-gray-700 bg-gray-900/30 p-5 relative group">
+                    <div class="border border-gray-700 bg-gray-900/30 p-5 relative group hover:border-gray-500 transition">
                         <div class="absolute -top-3 left-4 bg-black px-2 text-[10px] text-gray-400 border border-gray-700">DISTRICT A</div>
                         
                         <div class="flex justify-between items-end mb-4">
-                            <h3 class="text-2xl font-bold text-white">THE "HOT" ZONE</h3>
-                            <span class="text-[10px] text-red-400 font-bold animate-pulse">HIGH ACTIVITY</span>
+                            <h3 class="text-2xl font-bold text-white">NEW CBD ZONE</h3>
+                            <span class="text-[10px] text-gray-500">HIGH ACTIVITY</span>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4 text-center">
                             <div class="bg-black/80 border border-green-900 p-3 shadow-[0_0_10px_rgba(74,222,128,0.1)]">
-                                <div class="text-[9px] text-gray-400">AVG PRICE GROWTH</div>
+                                <div class="text-[9px] text-gray-400">AVG PRICE Δ</div>
                                 <div class="text-3xl font-bold text-green-400">+55%</div>
-                                <div class="text-[9px] text-green-700">SKYROCKETING 🚀</div>
+                                <div class="text-[9px] text-green-700">STRONG MOMENTUM</div>
                             </div>
                             <div class="bg-black/80 border border-gray-800 p-3 opacity-60">
                                 <div class="text-[9px] text-gray-400">HPI GROWTH (INDEX)</div>
                                 <div class="text-3xl font-bold text-gray-300">+12%</div>
-                                <div class="text-[9px] text-gray-600">LAGGING 🐢</div>
+                                <div class="text-[9px] text-gray-600">INDEX RATE</div>
                             </div>
-                        </div>
-                        <div class="mt-4 text-[10px] text-gray-500 italic border-l-2 border-gray-700 pl-2">
-                            "Prices are soaring! New record highs every month!"
                         </div>
                     </div>
 
-                    <div class="border border-gray-700 bg-gray-900/30 p-5 relative">
+                    <div class="border border-gray-700 bg-gray-900/30 p-5 relative hover:border-gray-500 transition">
                         <div class="absolute -top-3 left-4 bg-black px-2 text-[10px] text-gray-400 border border-gray-700">DISTRICT B</div>
                         
                         <div class="flex justify-between items-end mb-4">
-                            <h3 class="text-2xl font-bold text-white">THE "BORING" ZONE</h3>
-                            <span class="text-[10px] text-blue-400 font-bold">STABLE</span>
+                            <h3 class="text-2xl font-bold text-white">INTERCHANGE ZONE</h3>
+                            <span class="text-[10px] text-gray-500">MODERATE ACTIVITY</span>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4 text-center">
                             <div class="bg-black/80 border border-gray-800 p-3 opacity-60">
-                                <div class="text-[9px] text-gray-400">AVG PRICE GROWTH</div>
+                                <div class="text-[9px] text-gray-400">AVG PRICE Δ</div>
                                 <div class="text-3xl font-bold text-gray-400">+15%</div>
-                                <div class="text-[9px] text-gray-600">SLOW MOVING</div>
+                                <div class="text-[9px] text-gray-600">STEADY GROWTH</div>
                             </div>
                             <div class="bg-black/80 border border-blue-900 p-3 shadow-[0_0_10px_rgba(96,165,250,0.1)]">
                                 <div class="text-[9px] text-gray-400">HPI GROWTH (INDEX)</div>
                                 <div class="text-3xl font-bold text-blue-400">+35%</div>
-                                <div class="text-[9px] text-blue-700">REAL APPRECIATION 💎</div>
+                                <div class="text-[9px] text-blue-700">INDEX RATE</div>
                             </div>
-                        </div>
-                        <div class="mt-4 text-[10px] text-gray-500 italic border-l-2 border-gray-700 pl-2">
-                            "Nothing exciting happening here. Just old buildings."
                         </div>
                     </div>
                 </div>
 
                 <div class="mt-6 flex justify-center">
                     <button onclick="UI.toggleModal(true)" class="btn-terminal px-8 py-2 text-xs flex items-center gap-2">
-                        <span>📊 DEEP DIVE CHART</span> <span class="text-[9px] opacity-70">(REVEAL TRUTH)</span>
+                        <span>📊 DEEP DIVE CHART</span> <span class="text-[9px] opacity-70">(ANALYZE)</span>
                     </button>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div class="lg:col-span-3 space-y-2">
-                    <div class="text-[10px] font-bold text-gray-500 mb-2">MARKET ACCESS</div>
-                    <button onclick="renderAssets('A')" class="w-full text-left p-3 border border-gray-800 hover:border-green-500 text-xs font-bold transition">DISTRICT A (HYPE)</button>
-                    <button onclick="renderAssets('B')" class="w-full text-left p-3 border border-gray-800 hover:border-blue-500 text-xs font-bold transition">DISTRICT B (REAL)</button>
+                    <div class="text-[10px] font-bold text-gray-500 mb-2">ACCESS TERMINAL</div>
+                    <button onclick="renderAssets('A')" class="w-full text-left p-3 border border-gray-800 hover:border-green-500 text-xs font-bold transition">DISTRICT A</button>
+                    <button onclick="renderAssets('B')" class="w-full text-left p-3 border border-gray-800 hover:border-blue-500 text-xs font-bold transition">DISTRICT B</button>
                     
                     <div class="mt-8 terminal-border p-4">
                         <div class="flex justify-between mb-2">
@@ -139,7 +133,7 @@
                         </div>
                         <div id="portfolio-list" class="text-[10px] space-y-1 mb-4 text-gray-600 h-20 overflow-y-auto">// NO ASSETS</div>
                         <button id="btn-crisis" onclick="dispatch('CRISIS')" disabled class="w-full border border-red-900 text-red-500 text-[10px] py-3 hover:bg-red-900 hover:text-white transition uppercase font-bold">
-                            ⚠️ TRIGGER MARKET CRASH
+                            ⚠️ TRIGGER MARKET SHOCK
                         </button>
                     </div>
                 </div>
@@ -151,83 +145,112 @@
             </div>
         </section>
 
-        <section id="scene-crisis" class="hidden pt-10 px-4 max-w-5xl mx-auto">
-            <div class="text-center mb-10">
+        <section id="scene-crisis" class="hidden pt-10 px-4 max-w-6xl mx-auto">
+            <div class="text-center mb-12">
                 <h1 class="text-6xl font-black text-red-600 mb-2 glitch">CRASH REPORT</h1>
-                <p class="text-red-400 font-mono text-sm">SCENARIO: BUBBLE BURST & FLIGHT TO QUALITY</p>
+                <p class="text-red-400 font-mono text-sm uppercase tracking-widest">Post-Mortem Analysis // Year 2025</p>
             </div>
             
-            <div id="survivor-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"></div>
+            <div id="survivor-grid" class="grid grid-cols-1 gap-4 mb-10 max-w-3xl mx-auto"></div>
 
-            <div class="terminal-border p-8 bg-gray-900/90 border-l-4 border-l-blue-500">
-                <h3 class="text-xl font-bold text-blue-400 mb-6">🏆 THE SURVIVOR'S SECRET: "HPI vs AVERAGE"</h3>
+            <div class="terminal-border p-8 bg-black/90 border-l-4 border-l-yellow-500 text-gray-300">
+                <h3 class="text-2xl font-bold text-yellow-500 mb-6 flex items-center gap-2">
+                    <span>💡</span> THE ANALYST'S NOTEBOOK: WHY THE MARKET BEHAVED THIS WAY?
+                </h3>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+                <div class="space-y-8 font-mono text-sm leading-relaxed">
+                    
                     <div>
-                        <span class="text-red-400 font-bold block mb-2 border-b border-red-900 pb-1">❌ WHY DISTRICT A DIED? (The Average Trap)</span>
-                        <p class="text-gray-400 mb-2">
-                            You saw <b>Avg Price +55%</b> and bought. But that growth was fake. 
-                            It was caused by <i>new luxury towers launching at 250k/sqm</i>, pulling the math up.
+                        <h4 class="text-white font-bold border-b border-gray-700 pb-2 mb-3">1. THE "AVERAGE PRICE" ILLUSION (Why District A Crashed)</h4>
+                        <p class="mb-2">
+                            Many investors in District A saw <span class="text-green-400 font-bold">Avg Price +55%</span> and assumed their property would grow at that rate. 
+                            This is a statistical trap called <b>"Simpson's Paradox"</b>.
                         </p>
-                        <p class="text-gray-300">
-                            <b>The Reality:</b> Existing units (HPI) only grew +12%. 
-                            When the bubble burst, the "Average" meant nothing. Real demand wasn't there.
-                        </p>
+                        <ul class="list-disc pl-5 space-y-1 text-gray-400">
+                            <li>
+                                <b>The Mechanism:</b> The average didn't go up because <i>old condos got more expensive</i>. 
+                                It went up because developers launched <i>new Ultra-Luxury towers</i> (Type 3) at 250k/sqm.
+                            </li>
+                            <li>
+                                <b>The Reality:</b> Your Mass Market unit (Type 1) was actually stagnant because HPI (House Price Index) was only +12%. 
+                                HPI measures "Same-Store Sales". When HPI lags behind Average Price, it indicates a <b>Supply-Side Bubble</b>, not real demand appreciation.
+                            </li>
+                        </ul>
                     </div>
 
                     <div>
-                        <span class="text-green-400 font-bold block mb-2 border-b border-green-900 pb-1">✅ WHY DISTRICT B SURVIVED? (The HPI Truth)</span>
-                        <p class="text-gray-400 mb-2">
-                            You ignored the low <b>Avg Price +15%</b>. 
-                            You trusted the high <b>HPI +35%</b>.
+                        <h4 class="text-white font-bold border-b border-gray-700 pb-2 mb-3">2. THE POWER OF HPI (Why District B Survived)</h4>
+                        <p class="mb-2">
+                            District B looked boring with only <span class="text-gray-400 font-bold">Avg Price +15%</span>. 
+                            But the smart money noticed the <span class="text-blue-400 font-bold">HPI +35%</span>.
                         </p>
-                        <p class="text-white">
-                            <b>The Reality:</b> High HPI meant <i>"Same house, higher value."</i> 
-                            This indicates <b>True Appreciation</b> driven by infrastructure and scarcity. 
-                            These assets hold value in a crash.
-                        </p>
+                        <ul class="list-disc pl-5 space-y-1 text-gray-400">
+                            <li>
+                                <b>The Mechanism:</b> A high HPI with a low Average Price means <i>existing assets are increasing in value organically</i>. 
+                                There were no flashy new towers to skew the data.
+                            </li>
+                            <li>
+                                <b>The Result:</b> This signals <b>Real Demand</b>. People are willing to pay more for the <i>same</i> old building because they need to live there (Transportation/Work). 
+                                In a crisis, these assets are sticky; prices don't collapse because occupancy remains high.
+                            </li>
+                        </ul>
                     </div>
+
+                    <div>
+                        <h4 class="text-white font-bold border-b border-gray-700 pb-2 mb-3">3. THE "K-SHAPED" OUTCOME</h4>
+                        <p>
+                            The crash wasn't equal. It split the market into two directions:
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                            <div class="bg-red-900/10 border border-red-900/30 p-3 rounded">
+                                <strong class="text-red-400 block mb-1">📉 The Lower Leg (Type 1 Mass):</strong>
+                                Crashed hard (-60%). These buyers are debt-sensitive. When the economy slowed, they defaulted or dumped units, causing a price spiral.
+                            </div>
+                            <div class="bg-green-900/10 border border-green-900/30 p-3 rounded">
+                                <strong class="text-green-400 block mb-1">📈 The Upper Leg (Type 3 Luxury):</strong>
+                                Stayed resilient (-10% or stable). Wealthy owners have "Holding Power". They don't panic sell, treating assets as collectibles.
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
-            <button onclick="location.reload()" class="mt-8 w-full btn-terminal p-4 font-bold">REBOOT SYSTEM</button>
+            <button onclick="location.reload()" class="mt-12 w-full btn-terminal p-4 font-bold border-white text-white hover:bg-white hover:text-black">REBOOT SIMULATION</button>
         </section>
 
     </main>
 
-    <div id="modal-analytics" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <div id="modal-analytics" class="fixed inset-0 bg-black/95 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="terminal-border w-full max-w-4xl bg-black p-6 relative">
-            <button onclick="UI.toggleModal(false)" class="absolute top-4 right-4 text-red-500 font-bold hover:text-white">CLOSE [X]</button>
-            <h2 class="text-lg font-bold text-green-400 mb-1">THE DIVERGENCE</h2>
-            <p class="text-xs text-gray-500 mb-4">COMPARING AVERAGE PRICE vs HPI INDEX</p>
+            <button onclick="UI.toggleModal(false)" class="absolute top-4 right-4 text-red-500 font-bold hover:text-white">[CLOSE]</button>
+            <h2 class="text-lg font-bold text-green-400 mb-1">DATA DIVERGENCE ANALYSIS</h2>
+            <p class="text-xs text-gray-500 mb-4">AVG PRICE vs. HPI INDEX (5-YEAR TREND)</p>
             
             <div class="h-64 bg-gray-900/50 p-2 border border-gray-800">
                 <canvas id="deepChart"></canvas>
             </div>
             
-            <div class="mt-4 text-xs font-mono grid grid-cols-2 gap-4">
-                <div class="text-red-400">
-                    <span class="font-bold">DISTRICT A:</span> Gap is WIDE. (Avg Price > HPI). 
-                    <br>Signal: <span class="bg-red-900 text-white px-1">DANGEROUS SUPPLY SHOCK</span>
-                </div>
-                <div class="text-blue-400">
-                    <span class="font-bold">DISTRICT B:</span> Gap is TIGHT or INVERTED. (HPI > Avg Price).
-                    <br>Signal: <span class="bg-blue-900 text-white px-1">HEALTHY ORGANIC GROWTH</span>
-                </div>
+            <div class="mt-6 text-xs font-mono border-t border-gray-800 pt-4">
+                <p class="text-gray-400">
+                    <span class="text-red-500 font-bold">⚠️ CRITICAL WARNING:</span> 
+                    Notice the huge gap in District A between the <span class="text-green-400">Green Line (Avg Price)</span> and the <span class="text-red-400">Red Dashed Line (HPI)</span>. 
+                    This gap represents "Artificial Inflation" caused by luxury supply mix, not true value growth.
+                </p>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 1. CONFIG ---
+        // --- 1. CONFIG (No Hints in Names) ---
         const assets = {
             'A': [
-                { id: 'A1', name: 'A1: Mass Market', price: 3.0, hpi: '+5%', status_desc: 'Oversupplied', desc: 'Cheap unit in expensive district.' },
-                { id: 'A3', name: 'A3: Ultra Lux', price: 15.0, hpi: '+15%', status_desc: 'Bubble Pricing', desc: 'The reason Avg Price is high.' }
+                { id: 'A1', name: 'A1: City Condo (Mass)', price: 3.0, hpi: '+5%', status_desc: 'High Volume', desc: 'Standard unit. High density area.' },
+                { id: 'A3', name: 'A3: Sky Residence', price: 15.0, hpi: '+15%', status_desc: 'Premium', desc: 'New launch driving the Avg Price up.' }
             ],
             'B': [
-                { id: 'B1', name: 'B1: Gov Housing', price: 2.2, hpi: '+30%', status_desc: 'High Occupancy', desc: 'Ugly building, strong cashflow.' },
-                { id: 'B2', name: 'B2: Hub Station', price: 5.0, hpi: '+40%', status_desc: 'Scarce Supply', desc: 'Real demand magnet.' }
+                { id: 'B1', name: 'B1: Metro Living', price: 2.2, hpi: '+30%', status_desc: 'High Occupancy', desc: 'Older building. Strong rental demand.' },
+                { id: 'B2', name: 'B2: Interchange Suite', price: 5.0, hpi: '+40%', status_desc: 'Limited Supply', desc: 'Located at major transport node.' }
             ]
         };
 
@@ -289,55 +312,42 @@
             renderCrisis: () => {
                 document.getElementById('scene-dashboard').classList.add('hidden');
                 document.getElementById('scene-crisis').classList.remove('hidden');
-                document.body.style.backgroundColor = '#0a0000'; // Dark Red BG
+                document.body.style.backgroundColor = '#050000'; // Dark Red BG
 
                 const grid = document.getElementById('survivor-grid');
                 grid.innerHTML = store.portfolio.map(p => {
-                    // LOGIC: High HPI District (B) wins. Low HPI District (A) loses.
                     let change = 0;
                     let status = "";
                     let color = "";
-                    let reason = "";
+                    let brief = "";
 
                     if(p.id.includes('A')) {
-                        // District A: High Avg (+55%), Low HPI (+12%) -> CRASH
-                        change = -40;
-                        status = "LIQUIDATED ☠️";
-                        color = "text-red-500";
-                        reason = "Fake Growth. Avg Price was skewed by luxury launches. Real value (HPI) was weak.";
+                        if (p.id === 'A1') {
+                            change = -60; status = "LIQUIDATED"; color = "text-red-500";
+                            brief = "Asset Value collapsed due to oversupply.";
+                        } else {
+                            change = -10; status = "HELD"; color = "text-yellow-500";
+                            brief = "Luxury retained value, but liquidity froze.";
+                        }
                     } else {
-                        // District B: Low Avg (+15%), High HPI (+35%) -> SURVIVED
-                        change = +10;
-                        status = "SURVIVOR 🛡️";
-                        color = "text-green-400";
-                        reason = "True Value. High HPI proved existing assets were appreciating. Safe Haven.";
+                        change = +15; status = "SURVIVED"; color = "text-green-400";
+                        brief = "Asset appreciated due to real demand scarcity.";
                     }
 
                     const final = p.price * (1 + change/100);
 
                     return `
-                    <div class="terminal-border p-5 bg-black relative overflow-hidden">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 class="font-bold text-lg">${p.name}</h3>
-                                <p class="text-[10px] text-gray-500">${p.desc}</p>
-                            </div>
-                            <span class="${color} font-black border border-current px-2 py-1 text-xs">${status}</span>
+                    <div class="terminal-border p-5 bg-black flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-lg text-white">${p.name}</h3>
+                            <p class="text-[10px] text-gray-500">${brief}</p>
                         </div>
-                        
-                        <div class="grid grid-cols-2 gap-4 font-mono text-sm mb-4">
-                            <div>
-                                <div class="text-gray-600 text-[10px]">ENTRY</div>
-                                <div>${p.price.toFixed(2)}M</div>
+                        <div class="text-right">
+                            <div class="${color} font-black text-xl">${status}</div>
+                            <div class="text-xs font-mono text-gray-400">
+                                ${(change > 0 ? '+' : '') + change}% 
+                                <span class="text-gray-600">(${final.toFixed(2)}M)</span>
                             </div>
-                            <div>
-                                <div class="text-gray-600 text-[10px]">EXIT</div>
-                                <div class="${color} font-bold">${final.toFixed(2)}M</div>
-                            </div>
-                        </div>
-
-                        <div class="text-[10px] text-gray-400 border-t border-gray-800 pt-2">
-                            <span class="text-yellow-600 font-bold">ANALYSIS:</span> ${reason}
                         </div>
                     </div>`;
                 }).join('');
@@ -348,7 +358,7 @@
             const h = document.getElementById('district-header');
             const grid = document.getElementById('asset-grid');
             
-            // CONTEXT HEADER
+            // CONTEXT HEADER (Removed hints)
             const avg = zone === 'A' ? '+55%' : '+15%';
             const hpi = zone === 'A' ? '+12%' : '+35%';
             const color = zone === 'A' ? 'text-green-400' : 'text-blue-400';
@@ -356,8 +366,8 @@
             h.innerHTML = `
                 <div class="flex items-center gap-4 text-xs font-mono border-b border-gray-800 pb-2">
                     <span class="bg-gray-800 text-white px-2">DISTRICT ${zone}</span>
-                    <span class="text-gray-500">AVG PRICE: <b class="${color}">${avg}</b></span>
-                    <span class="text-gray-500">HPI: <b class="${color}">${hpi}</b></span>
+                    <span class="text-gray-500">AVG Δ: <b class="${color}">${avg}</b></span>
+                    <span class="text-gray-500">HPI Δ: <b class="${color}">${hpi}</b></span>
                 </div>
             `;
 
@@ -380,7 +390,7 @@
                         </div>
                     </div>
 
-                    <button onclick="dispatch('BUY', '${a.id}')" class="w-full btn-terminal py-2 text-xs">ACQUIRE</button>
+                    <button onclick="dispatch('BUY', '${a.id}')" class="w-full btn-terminal py-2 text-xs">ACQUIRE POSITION</button>
                 </div>
             `).join('');
         };
@@ -390,7 +400,7 @@
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ['2019', '2020', '2021', '2022', '2023'],
+                    labels: ['2020', '2021', '2022', '2023', '2024'],
                     datasets: [
                         { label: 'Dist A: Avg Price (+55%)', data: [100, 115, 130, 145, 155], borderColor: '#4ade80', borderWidth: 2 },
                         { label: 'Dist A: HPI Index (+12%)', data: [100, 102, 105, 108, 112], borderColor: '#ef4444', borderDash: [5,5], borderWidth: 2 },
