@@ -3,536 +3,460 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>THE BLACK SWAN TERMINAL: System Dynamics Sim</title>
+    <title>THE BLACK SWAN TERMINAL v2.0: Deep Dive</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* TERMINAL AESTHETICS */
-        body {
-            font-family: 'JetBrains Mono', monospace;
-            background-color: #0a0a0a;
-            color: #00ff41; /* Hacker Green */
-        }
-        .terminal-border {
-            border: 1px solid #333;
-            box-shadow: 0 0 10px rgba(0, 255, 65, 0.1);
-        }
+        /* TERMINAL CORE */
+        body { font-family: 'JetBrains Mono', monospace; background-color: #050505; color: #00ff41; }
+        .terminal-border { border: 1px solid #333; box-shadow: 0 0 10px rgba(0, 255, 65, 0.05); }
         .scanline {
-            width: 100%;
-            height: 100px;
-            z-index: 10;
+            width: 100%; height: 100px; z-index: 10;
             background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0, 255, 65, 0.04) 50%, rgba(0,0,0,0) 100%);
-            opacity: 0.1;
-            position: absolute;
-            bottom: 100%;
-            animation: scanline 10s linear infinite;
-            pointer-events: none;
+            opacity: 0.1; position: absolute; bottom: 100%;
+            animation: scanline 10s linear infinite; pointer-events: none;
         }
-        @keyframes scanline {
-            0% { bottom: 100%; }
-            100% { bottom: -100%; }
-        }
-        .flicker { animation: flicker 0.15s infinite; }
-        @keyframes flicker {
-            0% { opacity: 0.9; }
-            50% { opacity: 1.0; }
-            100% { opacity: 0.95; }
-        }
+        @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -100%; } }
         
-        /* UI STATES */
-        .hidden { display: none !important; }
         .btn-terminal {
-            background: #111;
-            border: 1px solid #00ff41;
-            color: #00ff41;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            background: #0f0f0f; border: 1px solid #00ff41; color: #00ff41;
+            transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px;
         }
-        .btn-terminal:hover:not(:disabled) {
-            background: #00ff41;
-            color: #000;
-            box-shadow: 0 0 15px #00ff41;
-        }
-        .btn-terminal:disabled {
-            border-color: #555;
-            color: #555;
-            cursor: not-allowed;
-        }
+        .btn-terminal:hover:not(:disabled) { background: #00ff41; color: #000; box-shadow: 0 0 15px #00ff41; }
+        .btn-terminal:disabled { border-color: #444; color: #444; cursor: not-allowed; }
         
-        /* CRISIS MODE */
-        .crisis-mode {
-            background-color: #1a0505;
-            color: #ff3333;
+        .hidden { display: none !important; }
+        
+        /* MODAL OVERLAY */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px);
+            z-index: 60; transition: opacity 0.3s;
         }
-        .crisis-mode .terminal-border { border-color: #ff3333; }
-        .crisis-mode .btn-terminal { border-color: #ff3333; color: #ff3333; }
-        .crisis-mode .btn-terminal:hover { background: #ff3333; color: #000; box-shadow: 0 0 15px #ff3333; }
+
+        /* CUSTOM SCROLLBAR */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #333; }
+        ::-webkit-scrollbar-thumb:hover { background: #00ff41; }
     </style>
 </head>
 <body class="overflow-x-hidden min-h-screen relative selection:bg-green-900 selection:text-white">
 
     <div class="scanline"></div>
 
-    <nav class="fixed top-0 w-full z-50 bg-black/90 border-b border-gray-800 p-2 flex justify-between items-center text-xs md:text-sm backdrop-blur-sm">
+    <nav class="fixed top-0 w-full z-50 bg-black/90 border-b border-gray-800 p-2 flex justify-between items-center text-xs backdrop-blur-sm">
         <div class="flex gap-4">
-            <span class="font-bold">SYSTEM: <span id="sys-status" class="animate-pulse">ONLINE</span></span>
-            <span>VIX: <span id="hud-vix">12.5</span></span>
+            <span class="font-bold text-green-400">SYS: <span class="animate-pulse">ONLINE</span></span>
+            <span>VIX: <span id="hud-vix">14.2</span></span>
         </div>
-        <div class="flex gap-4 text-right">
-            <span>CASH: <span id="hud-cash">0.00</span> THB</span>
-            <span>PORTFOLIO: <span id="hud-nav">0.00</span> THB</span>
+        <div class="flex gap-4">
+            <span>CASH: <span id="hud-cash" class="font-bold text-white">0.00</span></span>
+            <span>NAV: <span id="hud-nav">0</span> UNIT</span>
         </div>
     </nav>
 
-    <main class="container mx-auto pt-16 px-4 max-w-6xl">
+    <main class="container mx-auto pt-16 px-4 max-w-7xl">
         
         <section id="scene-setup" class="min-h-[80vh] flex flex-col justify-center items-center">
-            <div class="terminal-border p-8 max-w-lg w-full bg-black relative">
-                <div class="absolute -top-3 left-4 bg-black px-2 text-xs font-bold text-gray-500">USER_AUTH_MODULE</div>
-                <h1 class="text-3xl font-bold mb-2">IDENTITY SETUP</h1>
-                <p class="text-gray-500 text-xs mb-8">Initialize economic parameters for simulation.</p>
-
-                <div class="space-y-6">
+            <div class="terminal-border p-8 max-w-md w-full bg-black relative">
+                <div class="absolute -top-3 left-4 bg-black px-2 text-[10px] font-bold text-gray-500">AUTH_SEQ_01</div>
+                <h1 class="text-2xl font-bold mb-6">IDENTITY SETUP</h1>
+                
+                <div class="space-y-4 mb-6">
                     <div>
-                        <label class="block text-xs mb-1 opacity-70">AGE_PARAMETER</label>
-                        <input type="number" id="input-age" class="w-full bg-gray-900 border border-gray-700 p-2 text-white focus:border-green-500 focus:outline-none" value="28">
+                        <label class="text-xs text-gray-500">AGE_CYCLE</label>
+                        <input type="number" id="input-age" class="w-full bg-gray-900 border border-gray-700 p-2 text-white text-sm focus:border-green-500 outline-none" value="30">
                     </div>
                     <div>
-                        <label class="block text-xs mb-1 opacity-70">INCOME_CLASS</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <button onclick="dispatch('SELECT_ROLE', 'JUNIOR')" class="btn-terminal p-2 text-xs">JUNIOR</button>
-                            <button onclick="dispatch('SELECT_ROLE', 'MANAGER')" class="btn-terminal p-2 text-xs">MANAGER</button>
-                            <button onclick="dispatch('SELECT_ROLE', 'EXEC')" class="btn-terminal p-2 text-xs">EXEC</button>
+                        <label class="text-xs text-gray-500">CAPITAL_TIER</label>
+                        <div class="grid grid-cols-3 gap-2 mt-1">
+                            <button onclick="dispatch('SELECT_ROLE', 'JUNIOR')" class="btn-terminal p-2 text-[10px]">JR (35K)</button>
+                            <button onclick="dispatch('SELECT_ROLE', 'MANAGER')" class="btn-terminal p-2 text-[10px]">MGR (85K)</button>
+                            <button onclick="dispatch('SELECT_ROLE', 'EXEC')" class="btn-terminal p-2 text-[10px]">EXEC (250K)</button>
                         </div>
-                        <p id="role-desc" class="text-xs mt-2 text-gray-500 min-h-[1.5em]">// SELECT A CLASS TO CONTINUE</p>
                     </div>
-                    <button id="btn-start" onclick="dispatch('START_SIM')" disabled class="w-full btn-terminal p-3 font-bold mt-4">INITIALIZE SYSTEM</button>
                 </div>
+                <button id="btn-start" onclick="dispatch('START_SIM')" disabled class="w-full btn-terminal p-3 font-bold text-sm">INITIALIZE TERMINAL</button>
             </div>
         </section>
 
-        <section id="scene-dashboard" class="hidden fade-in pb-20">
-            <div class="w-full bg-gray-900 overflow-hidden whitespace-nowrap py-1 mb-6 border-y border-gray-800">
-                <div id="news-ticker" class="inline-block animate-[marquee_20s_linear_infinite] text-xs text-gray-400">
-                    MARKET OPEN // WAITING FOR DATA STREAM...
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                <div class="lg:col-span-8 space-y-6">
-                    <div class="terminal-border p-4 bg-black/50">
-                        <h2 class="text-lg font-bold mb-4 border-b border-gray-800 pb-2">MARKET ACCESS // DISTRICT_VIEW</h2>
-                        
-                        <div class="flex gap-2 mb-4 overflow-x-auto">
-                            <button onclick="renderAssets('A')" class="btn-terminal px-4 py-1 text-xs">DISTRICT A (HYPE)</button>
-                            <button onclick="renderAssets('B')" class="btn-terminal px-4 py-1 text-xs">DISTRICT B (SAFE)</button>
-                            <button onclick="renderAssets('C')" class="btn-terminal px-4 py-1 text-xs">DISTRICT C (OLD)</button>
-                        </div>
-
-                        <div id="asset-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            </div>
+        <section id="scene-dashboard" class="hidden pb-20 fade-in">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+                <div class="lg:col-span-3 terminal-border p-4 bg-black/80 relative">
+                    <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
+                        <h2 class="text-sm font-bold">MARKET INTELLIGENCE // MACRO VIEW</h2>
+                        <span class="text-[10px] text-gray-500">LIVE FEED</span>
                     </div>
-                </div>
-
-                <div class="lg:col-span-4 space-y-6">
                     
-                    <div class="terminal-border p-4 bg-black">
-                        <h3 class="text-xs font-bold text-gray-500 mb-2">HIDDEN_METRICS_MONITOR (DEBUG)</h3>
-                        <div class="space-y-2 text-xs font-mono">
-                            <div class="flex justify-between">
-                                <span>MARKET_SENTIMENT (BETA)</span>
-                                <div class="w-24 bg-gray-800 h-2 mt-1"><div id="bar-sentiment" class="bg-blue-500 h-2" style="width: 50%"></div></div>
-                            </div>
-                            <div class="flex justify-between">
-                                <span>SYSTEM_FRAGILITY</span>
-                                <div class="w-24 bg-gray-800 h-2 mt-1"><div id="bar-fragility" class="bg-red-500 h-2" style="width: 10%"></div></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                        <div class="p-3 border border-gray-800 bg-gray-900/30">
+                            <h3 class="text-xs text-gray-400">DISTRICT A (HYPE)</h3>
+                            <div class="text-2xl font-bold text-green-400 mt-1">+42%</div>
+                            <div class="text-[10px] text-gray-500">5Y HPI GROWTH</div>
+                            <div class="mt-2 text-xs flex justify-between px-4">
+                                <span>AVG: <span class="text-white">145k</span></span>
+                                <span>YIELD: <span class="text-yellow-500">4.5%</span></span>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="terminal-border p-4 bg-black min-h-[300px]">
-                        <h3 class="text-sm font-bold mb-4">ACTIVE_HOLDINGS</h3>
-                        <div id="holdings-list" class="space-y-2 text-xs">
-                            <p class="text-gray-600 text-center mt-10">NO ASSETS ACQUIRED</p>
+                         <div class="p-3 border border-gray-800 bg-gray-900/30">
+                            <h3 class="text-xs text-gray-400">DISTRICT B (SAFE)</h3>
+                            <div class="text-2xl font-bold text-blue-400 mt-1">+18%</div>
+                            <div class="text-[10px] text-gray-500">5Y HPI GROWTH</div>
+                            <div class="mt-2 text-xs flex justify-between px-4">
+                                <span>AVG: <span class="text-white">95k</span></span>
+                                <span>YIELD: <span class="text-yellow-500">5.2%</span></span>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="p-4 border border-red-900 bg-red-900/10 rounded">
-                        <h3 class="text-red-500 font-bold text-sm mb-2">⚠️ DANGER ZONE</h3>
-                        <p class="text-[10px] text-red-400 mb-3">Initiate Black Swan Event simulation. This process is irreversible.</p>
-                        <button onclick="dispatch('TRIGGER_CRISIS')" id="btn-crisis" disabled class="w-full border border-red-600 text-red-600 hover:bg-red-600 hover:text-white p-3 text-xs font-bold uppercase transition">
-                            INITIATE STRESS TEST
-                        </button>
+                        <div class="flex items-center justify-center">
+                            <button onclick="UI.toggleModal(true)" class="btn-terminal w-full h-full flex flex-col items-center justify-center gap-2 text-xs">
+                                <span class="text-2xl">📊</span>
+                                <span>OPEN DEEP DIVE ANALYTICS</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                <div class="terminal-border p-4 bg-black/80">
+                    <h2 class="text-xs font-bold text-gray-500 mb-2">PORTFOLIO_STATUS</h2>
+                    <div id="portfolio-list" class="h-24 overflow-y-auto text-[10px] space-y-2 mb-4">
+                        <p class="text-gray-700 text-center pt-8">// NO POSITIONS</p>
+                    </div>
+                    <button id="btn-crisis" onclick="dispatch('TRIGGER_CRISIS')" disabled class="w-full border border-red-900 text-red-700 p-2 text-[10px] hover:bg-red-900 hover:text-white transition">
+                        ⚠️ INITIATE STRESS TEST
+                    </button>
+                </div>
             </div>
+
+            <div class="terminal-border p-6 bg-black/90">
+                <div class="flex gap-4 mb-6 border-b border-gray-800 pb-2 overflow-x-auto">
+                    <button onclick="renderAssets('A')" class="text-xs hover:text-green-400 focus:text-green-400 font-bold px-2 py-1">DISTRICT A</button>
+                    <button onclick="renderAssets('B')" class="text-xs hover:text-green-400 focus:text-green-400 font-bold px-2 py-1">DISTRICT B</button>
+                    <button onclick="renderAssets('C')" class="text-xs hover:text-green-400 focus:text-green-400 font-bold px-2 py-1">DISTRICT C</button>
+                </div>
+                <div id="asset-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    </div>
+            </div>
+
         </section>
 
         <section id="scene-crisis" class="hidden min-h-screen pt-10">
-            <div class="max-w-4xl mx-auto">
+            <div class="max-w-5xl mx-auto p-4">
                 <div class="text-center mb-10">
-                    <h1 class="text-6xl font-black text-red-600 glitch-effect mb-4">SYSTEM FAILURE</h1>
-                    <p class="text-xl text-red-400 font-mono">CRITICAL ECONOMIC EVENT DETECTED</p>
-                    <div class="w-full h-1 bg-red-900 mt-4 relative overflow-hidden">
-                        <div class="absolute top-0 left-0 h-full w-1/3 bg-red-500 animate-[loading_2s_ease-in-out_infinite]"></div>
+                    <h1 class="text-5xl font-black text-red-600 mb-2 glitch">MARKET CRASH</h1>
+                    <p class="text-sm font-mono text-red-400">EVENT: BLACK SWAN DETECTED // CORRELATION BREAKDOWN</p>
+                </div>
+                
+                <div id="survivor-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    </div>
+
+                <div class="terminal-border p-6 bg-gray-900/50 border-yellow-600/50 text-sm font-mono">
+                    <h3 class="text-yellow-500 font-bold mb-4">💡 POST-MORTEM ANALYSIS</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <p class="text-gray-400 text-xs mb-1">THE AVERAGES TRAP:</p>
+                            <p class="mb-4">
+                                District A HPI (+42%) was a <span class="text-red-400">FALSE SIGNAL</span>. 
+                                It was heavily skewed by the top 10% Luxury Projects (A3). 
+                                The Mass Market (A1) was actually stagnant, which killed your portfolio.
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-xs mb-1">THE WINNER'S LOGIC:</p>
+                            <p>
+                                District B looked boring (+18%), but its growth was <span class="text-green-400">UNIFORM</span>. 
+                                By picking Archetype B2 (Hub), you gained from Infrastructure stability + Low Volatility.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                <div id="crisis-log" class="space-y-4 mb-10 font-mono text-sm">
-                    </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="survivor-grid">
-                    </div>
-                
-                <button onclick="location.reload()" class="mt-10 w-full border border-gray-600 text-gray-400 hover:text-white hover:border-white p-4 uppercase">REBOOT SYSTEM</button>
+                <button onclick="location.reload()" class="mt-8 w-full btn-terminal p-4">SYSTEM REBOOT</button>
             </div>
         </section>
 
     </main>
 
-    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+    <div id="modal-analytics" class="modal-overlay fixed inset-0 hidden flex items-center justify-center p-4">
+        <div class="bg-black border border-green-500/30 w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative">
+            <button onclick="UI.toggleModal(false)" class="absolute top-4 right-4 text-green-500 hover:text-white">✕ CLOSE</button>
+            
+            <h2 class="text-xl font-bold mb-6 text-green-400">DEEP DIVE ANALYTICS // UNBUNDLED DATA</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="h-64 bg-gray-900/50 p-2 border border-gray-800">
+                    <canvas id="hpiChart"></canvas>
+                </div>
+                
+                <div class="space-y-4 text-xs font-mono text-gray-300">
+                    <div class="p-3 border-l-2 border-red-500 bg-red-900/10">
+                        <h4 class="font-bold text-red-400">⚠️ DISTRICT A ANOMALY</h4>
+                        <p>Warning: Deviation between Mean Price and Median Price is HIGH.</p>
+                        <p>Top 5% Luxury units (A3) are pulling the average up by +30%.</p>
+                        <p>Mass market units (A1) show signs of oversupply.</p>
+                    </div>
+                    <div class="p-3 border-l-2 border-blue-500 bg-blue-900/10">
+                        <h4 class="font-bold text-blue-400">ℹ️ DISTRICT B STABILITY</h4>
+                        <p>Standard Deviation is LOW. Prices are clustered around the mean.</p>
+                        <p>High correlation with Government Infrastructure spending.</p>
+                    </div>
+                </div>
+            </div>
+
+            <table class="w-full text-xs text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-gray-700 text-gray-500">
+                        <th class="p-2">ARCHETYPE</th>
+                        <th class="p-2">REAL HPI (5Y)</th>
+                        <th class="p-2">YIELD</th>
+                        <th class="p-2">RISK RATING</th>
+                        <th class="p-2">VERDICT</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-300">
+                    <tr class="border-b border-gray-800 bg-red-900/5 hover:bg-red-900/20">
+                        <td class="p-2 font-bold">A1: Mass Market</td>
+                        <td class="p-2 text-red-400">+5% (Stagnant)</td>
+                        <td class="p-2">5.5% (High Vacancy)</td>
+                        <td class="p-2 text-red-500">EXTREME</td>
+                        <td class="p-2">⛔ AVOID (Value Trap)</td>
+                    </tr>
+                    <tr class="border-b border-gray-800 bg-green-900/5 hover:bg-green-900/20">
+                        <td class="p-2 font-bold">A3: Luxury Prime</td>
+                        <td class="p-2 text-green-400">+65% (Skyrocket)</td>
+                        <td class="p-2">3.8% (Stable)</td>
+                        <td class="p-2 text-yellow-500">MED-HIGH</td>
+                        <td class="p-2">💎 TRUE WINNER</td>
+                    </tr>
+                    <tr class="border-b border-gray-800 bg-blue-900/5 hover:bg-blue-900/20">
+                        <td class="p-2 font-bold">B2: Hub Station</td>
+                        <td class="p-2 text-blue-400">+25% (Steady)</td>
+                        <td class="p-2">5.0% (Consistent)</td>
+                        <td class="p-2 text-green-500">LOW</td>
+                        <td class="p-2">🛡️ SAFE HAVEN</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="toast-con" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2"></div>
 
     <script>
-        /**
-         * ------------------------------------------------------------------
-         * ARCHITECTURE: FLUX-LIKE STORE (Redux Pattern)
-         * Reason: Decouples State Logic from UI Rendering for complex sims.
-         * ------------------------------------------------------------------
-         */
-        
-        // --- 1. INITIAL STATE ---
-        const initialState = {
-            view: 'SETUP', // SETUP, DASHBOARD, CRISIS
-            user: { age: 25, role: null, salary: 0, cash: 0 },
-            assets: [], // Market assets
-            portfolio: [], // User holdings
-            market: {
-                vix: 15.0, // Volatility Index
-                sentiment: 0.5, // 0.0 (Panic) - 1.0 (Euphoria)
-                fragility: 0.1, // Accumulates with risky buys
-            },
-            logs: []
+        // --- 1. GAME ENGINE & STATE ---
+        const store = {
+            view: 'SETUP',
+            user: { role: null, cash: 0 },
+            portfolio: [],
+            // ASSET DATABASE: The "Truth" vs "Perception"
+            assets: [
+                // DISTRICT A: The "Trap" (High Average, skewed by A3)
+                { id: 'A1', name: 'A1: Mass Market', zone: 'A', price: 2.5,  hpi_real: 105, yield: 5.5, beta: 2.0, resil: 0.1, desc: 'Small unit, deep soi. Looks cheap.' },
+                { id: 'A2', name: 'A2: Standard',    zone: 'A', price: 4.5,  hpi_real: 120, yield: 4.5, beta: 1.2, resil: 0.5, desc: 'Mid-tier, walking distance to MRT.' },
+                { id: 'A3', name: 'A3: Prime Lux',   zone: 'A', price: 12.0, hpi_real: 165, yield: 3.8, beta: 1.5, resil: 0.9, desc: 'Top tier. The reason District A avg is high.' },
+                
+                // DISTRICT B: The "Safe Haven" (Consistent)
+                { id: 'B1', name: 'B1: Budget Gov',  zone: 'B', price: 2.0,  hpi_real: 110, yield: 5.5, beta: 0.6, resil: 0.7, desc: 'Civil servant housing. Boring but safe.' },
+                { id: 'B2', name: 'B2: Hub Station', zone: 'B', price: 4.8,  hpi_real: 125, yield: 5.0, beta: 0.4, resil: 0.85, desc: 'Transport Hub. High demand.' },
+                
+                // DISTRICT C: Old Town
+                { id: 'C1', name: 'C1: Heritage',    zone: 'C', price: 5.5,  hpi_real: 115, yield: 4.0, beta: 0.3, resil: 0.6, desc: 'Niche market.' }
+            ]
         };
 
-        // --- 2. ASSET DATABASE (The Model) ---
-        // Using 'Beta' for market correlation and 'Resilience' for crisis survival
-        const ASSET_DB = [
-            // DISTRICT A: HYPE / VOLATILE (Huai Khwang)
-            { id: 'A1', name: 'Type 1: Mass Market', zone: 'A', price: 2.5, beta: 1.8, resilience: 0.1, hidden: { tenantQuality: 0.2 }, desc: "High density, deep soi. High volatility." },
-            { id: 'A2', name: 'Type 2: Real Demand', zone: 'A', price: 4.5, beta: 1.2, resilience: 0.5, hidden: { tenantQuality: 0.6 }, desc: "Standard grade, near MRT." },
-            { id: 'A3', name: 'Type 3: Prime Lux', zone: 'A', price: 12.0, beta: 1.5, resilience: 0.8, hidden: { tenantQuality: 0.95 }, desc: "Scarce asset. High holding power required." },
-            
-            // DISTRICT B: SAFE HAVEN (Gov Complex)
-            { id: 'B1', name: 'B1: Budget Gov', zone: 'B', price: 2.0, beta: 0.5, resilience: 0.7, hidden: { tenantQuality: 0.8 }, desc: "Stable gov tenants. Low growth." },
-            { id: 'BX', name: 'BX: Hidden Gem', zone: 'B', price: 3.5, beta: -0.4, resilience: 0.9, hidden: { tenantQuality: 0.7 }, desc: "Substitution effect beneficiary. Negative Beta." },
-            
-            // DISTRICT C: OLD TOWN
-            { id: 'C1', name: 'C1: Heritage', zone: 'C', price: 5.0, beta: 0.2, resilience: 0.6, hidden: { tenantQuality: 0.5 }, desc: "Niche market. Low liquidity." }
-        ];
-
-        // --- 3. THE STORE ---
-        class GameStore {
-            constructor(reducer, initialState) {
-                this.reducer = reducer;
-                this.state = initialState;
-                this.listeners = [];
+        // --- 2. CONTROLLER LOGIC ---
+        function dispatch(action, payload) {
+            if (action === 'SELECT_ROLE') {
+                const roles = { 'JUNIOR': 400000, 'MANAGER': 2000000, 'EXEC': 10000000 };
+                store.user.role = payload;
+                store.user.cash = roles[payload];
+                UI.renderSetup();
             }
-
-            getState() { return this.state; }
-
-            dispatch(action) {
-                console.log('DISPATCH:', action.type, action.payload); // Debug Log
-                this.state = this.reducer(this.state, action);
-                this.listeners.forEach(listener => listener(this.state));
+            if (action === 'START_SIM') {
+                store.view = 'DASHBOARD';
+                UI.initDashboard();
             }
-
-            subscribe(listener) {
-                this.listeners.push(listener);
-                return () => { this.listeners = this.listeners.filter(l => l !== listener); };
-            }
-        }
-
-        // --- 4. MATH ENGINE (Advanced Logic) ---
-        const MathEngine = {
-            // Gaussian Random for realistic distribution
-            gaussianRandom: (mean=0, stdev=1) => {
-                const u = 1 - Math.random(); 
-                const v = Math.random();
-                const z = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
-                return z * stdev + mean;
-            },
-
-            // Logistic Function for S-Curve adoption/impact
-            logistic: (x, k=1) => 1 / (1 + Math.exp(-k * x)),
-
-            // Calculate Crisis Impact
-            calculateCrash: (asset, severity) => {
-                // Formula: Shock = BaseSeverity * Beta * (1 - Resilience)
-                // Add randomness using Gaussian
-                const noise = MathEngine.gaussianRandom(1, 0.1); 
-                
-                // Special Case: Negative Beta (Asset BX) gains value during crash
-                if (asset.beta < 0) {
-                    return Math.abs(severity * asset.beta * 2) * noise; // Positive gain
+            if (action === 'BUY') {
+                const asset = store.assets.find(a => a.id === payload);
+                const cost = asset.price * 1000000 * 0.15; // 15% Down
+                if (store.user.cash >= cost) {
+                    store.user.cash -= cost;
+                    store.portfolio.push({ ...asset, buyPrice: asset.price });
+                    UI.toast(`ACQUIRED: ${asset.name}`, 'success');
+                    UI.updateHUD();
+                } else {
+                    UI.toast('INSUFFICIENT CAPITAL', 'error');
                 }
-
-                // Normal Assets
-                let damage = severity * asset.beta * (1 - asset.resilience) * noise;
-                
-                // Exponential Decay for 'Hidden Variables' (e.g., tenant quality)
-                if(asset.hidden.tenantQuality < 0.3) damage *= 1.5; // Penalty for bad tenants
-
-                return -Math.min(damage, 0.95); // Max drop 95%
             }
-        };
-
-        // --- 5. REDUCER (State Logic) ---
-        function rootReducer(state, action) {
-            // Helper for Immutability
-            const newState = JSON.parse(JSON.stringify(state));
-
-            switch (action.type) {
-                case 'SELECT_ROLE':
-                    const roles = {
-                        'JUNIOR': { salary: 35000, cash: 400000 },
-                        'MANAGER': { salary: 85000, cash: 2000000 },
-                        'EXEC': { salary: 250000, cash: 10000000 }
-                    };
-                    newState.user.role = action.payload;
-                    newState.user.salary = roles[action.payload].salary;
-                    newState.user.cash = roles[action.payload].cash;
-                    return newState;
-
-                case 'START_SIM':
-                    newState.view = 'DASHBOARD';
-                    // Populate Market with current instances
-                    newState.assets = ASSET_DB.map(a => ({...a}));
-                    return newState;
-
-                case 'BUY_ASSET':
-                    const asset = newState.assets.find(a => a.id === action.payload);
-                    const cost = asset.price * 1000000 * 0.15; // 15% Down payment
-                    
-                    if (newState.user.cash >= cost) {
-                        newState.user.cash -= cost;
-                        // Add to portfolio with entry data
-                        newState.portfolio.push({
-                            ...asset,
-                            entryVal: asset.price,
-                            currentVal: asset.price,
-                            id: asset.id + '_' + Date.now() // Unique Instance
-                        });
-                        
-                        // Increase System Fragility based on Asset Beta
-                        newState.market.fragility += (asset.beta * 0.05);
-                        
-                        UI.toast(`ACQUIRED: ${asset.name}`, 'success');
-                    } else {
-                        UI.toast('INSUFFICIENT FUNDS', 'error');
-                    }
-                    return newState;
-
-                case 'UPDATE_MARKET':
-                    // Random Walk Logic for VIX
-                    const drift = MathEngine.gaussianRandom(0, 0.5);
-                    newState.market.vix = Math.max(10, Math.min(80, newState.market.vix + drift));
-                    newState.market.sentiment = Math.max(0, Math.min(1, newState.market.sentiment + (drift * -0.01)));
-                    return newState;
-
-                case 'TRIGGER_CRISIS':
-                    newState.view = 'CRISIS';
-                    const crisisSeverity = 0.6; // Base 60% market contraction
-                    
-                    // Process Portfolio Impact
-                    newState.portfolio = newState.portfolio.map(p => {
-                        const impactPct = MathEngine.calculateCrash(p, crisisSeverity);
-                        p.changePct = impactPct;
-                        p.currentVal = p.entryVal * (1 + impactPct);
-                        
-                        // Determine Outcome
-                        if (impactPct < -0.6) p.status = 'LIQUIDATED';
-                        else if (impactPct < -0.3) p.status = 'UNDERWATER';
-                        else if (impactPct > 0) p.status = 'OUTPERFORM';
-                        else p.status = 'SURVIVED';
-                        
-                        return p;
-                    });
-
-                    // Add Substitution Effect Logic (Cascading)
-                    // If A1 & A2 fail -> BX demand increases
-                    const failCount = newState.portfolio.filter(p => p.status === 'LIQUIDATED').length;
-                    if(failCount > 0) {
-                         newState.portfolio.forEach(p => {
-                             if(p.id.startsWith('BX')) {
-                                 p.currentVal *= 1.2; // +20% Boost from cascading demand
-                                 p.changePct += 0.2;
-                                 p.note = "Flight to Safety Boost";
-                             }
-                         });
-                    }
-
-                    return newState;
-
-                default:
-                    return state;
+            if (action === 'TRIGGER_CRISIS') {
+                store.view = 'CRISIS';
+                UI.renderCrisis();
             }
         }
 
-        // --- 6. UI CONTROLLER (The View) ---
-        const store = new GameStore(rootReducer, initialState);
-        let currentDistrict = 'A';
-
+        // --- 3. UI HANDLER ---
         const UI = {
-            init: () => {
-                store.subscribe(UI.render);
-                // Game Loop for Market Ticker
-                setInterval(() => store.dispatch({ type: 'UPDATE_MARKET' }), 2000);
+            renderSetup: () => {
+                document.getElementById('input-age').value = store.user.role ? `SELECTED: ${store.user.role}` : 30;
+                document.getElementById('btn-start').disabled = !store.user.role;
+                document.getElementById('btn-start').innerText = store.user.role ? `START WITH ${store.user.cash.toLocaleString()} THB` : 'SELECT ROLE';
             },
 
-            toast: (msg, type='info') => {
-                const con = document.getElementById('toast-container');
+            initDashboard: () => {
+                document.getElementById('scene-setup').classList.add('hidden');
+                document.getElementById('scene-dashboard').classList.remove('hidden');
+                UI.updateHUD();
+                renderAssets('A'); // Default view
+                UI.initChart(); // Draw the graph in modal
+            },
+
+            updateHUD: () => {
+                document.getElementById('hud-cash').innerText = store.user.cash.toLocaleString();
+                document.getElementById('hud-nav').innerText = store.portfolio.length;
+                
+                const list = document.getElementById('portfolio-list');
+                if(store.portfolio.length > 0) {
+                    document.getElementById('btn-crisis').disabled = false;
+                    list.innerHTML = store.portfolio.map(p => 
+                        `<div class="flex justify-between border-b border-gray-800 pb-1">
+                            <span>${p.name}</span>
+                            <span class="text-green-500">${p.buyPrice}M</span>
+                        </div>`
+                    ).join('');
+                }
+            },
+
+            toggleModal: (show) => {
+                const modal = document.getElementById('modal-analytics');
+                if(show) modal.classList.remove('hidden');
+                else modal.classList.add('hidden');
+            },
+
+            initChart: () => {
+                const ctx = document.getElementById('hpiChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['2019', '2020', '2021', '2022', '2023'],
+                        datasets: [
+                            {
+                                label: 'District A (Avg)',
+                                data: [100, 110, 125, 135, 142], // Looks high growth
+                                borderColor: '#4ade80', // Green
+                                borderWidth: 2,
+                                tension: 0.4
+                            },
+                            {
+                                label: 'District B (Avg)',
+                                data: [100, 103, 106, 112, 118], // Looks boring
+                                borderColor: '#60a5fa', // Blue
+                                borderWidth: 2,
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Real A1 (Mass)', // The hidden truth line
+                                data: [100, 95, 90, 92, 95], // Stagnant
+                                borderColor: '#ef4444', // Red
+                                borderDash: [5, 5],
+                                hidden: false // Show it to reveal truth
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { labels: { color: '#888', font: {family: 'JetBrains Mono'} } } },
+                        scales: {
+                            y: { grid: { color: '#333' }, ticks: { color: '#666' } },
+                            x: { grid: { display: false }, ticks: { color: '#666' } }
+                        }
+                    }
+                });
+            },
+
+            toast: (msg, type) => {
                 const el = document.createElement('div');
-                const colors = type === 'error' ? 'border-red-500 text-red-500' : 'border-green-500 text-green-500';
-                el.className = `p-3 bg-black border ${colors} text-xs font-mono shadow-lg fade-in`;
+                const color = type === 'success' ? 'border-green-500 text-green-500' : 'border-red-500 text-red-500';
+                el.className = `p-2 bg-black border ${color} text-xs shadow-lg fade-in`;
                 el.innerText = `>> ${msg}`;
-                con.appendChild(el);
+                document.getElementById('toast-con').appendChild(el);
                 setTimeout(() => el.remove(), 3000);
             },
 
-            render: (state) => {
-                // 1. Scene Management
-                document.getElementById('scene-setup').classList.toggle('hidden', state.view !== 'SETUP');
-                document.getElementById('scene-dashboard').classList.toggle('hidden', state.view !== 'DASHBOARD');
-                document.getElementById('scene-crisis').classList.toggle('hidden', state.view !== 'CRISIS');
+            renderCrisis: () => {
+                document.getElementById('scene-dashboard').classList.add('hidden');
+                document.getElementById('scene-crisis').classList.remove('hidden');
+                document.body.style.backgroundColor = '#1a0505'; // Red tint
 
-                // 2. HUD Updates
-                document.getElementById('hud-cash').innerText = state.user.cash.toLocaleString();
-                document.getElementById('hud-vix').innerText = state.market.vix.toFixed(2);
-                document.getElementById('hud-nav').innerText = state.portfolio.length;
-
-                // 3. Setup Scene Logic
-                if (state.view === 'SETUP') {
-                    document.getElementById('role-desc').innerText = state.user.role 
-                        ? `// ROLE: ${state.user.role} | CASH: ${state.user.cash.toLocaleString()}`
-                        : `// SELECT A CLASS TO CONTINUE`;
-                    document.getElementById('btn-start').disabled = !state.user.role;
-                }
-
-                // 4. Dashboard Logic
-                if (state.view === 'DASHBOARD') {
-                    // Update Bars
-                    document.getElementById('bar-sentiment').style.width = (state.market.sentiment * 100) + '%';
-                    document.getElementById('bar-fragility').style.width = (state.market.fragility * 100) + '%';
+                const grid = document.getElementById('survivor-grid');
+                grid.innerHTML = store.portfolio.map(p => {
+                    // CALCULATION LOGIC (The Twist)
+                    // Crisis Impact = Beta * Severity * (1 - Resilience)
+                    // A1: Beta 2.0, Resil 0.1 -> Massive damage
+                    // A3: Beta 1.5, Resil 0.9 -> Low damage (Holding power)
+                    // B2: Beta 0.4, Resil 0.85 -> Safe
                     
-                    // Render Holdings
-                    const list = document.getElementById('holdings-list');
-                    if (state.portfolio.length === 0) {
-                        list.innerHTML = '<p class="text-gray-600 text-center mt-10">// NO ASSETS</p>';
-                        document.getElementById('btn-crisis').disabled = true;
-                    } else {
-                        document.getElementById('btn-crisis').disabled = false;
-                        list.innerHTML = state.portfolio.map(p => `
-                            <div class="flex justify-between border-b border-gray-800 pb-1">
-                                <span>${p.name}</span>
-                                <span class="font-mono text-green-500">${p.price}M</span>
-                            </div>
-                        `).join('');
-                    }
-                }
+                    const severity = -0.4; // 40% Market shock
+                    let impact = severity * p.beta * (1 - p.resil);
+                    
+                    // Twist logic reinforcement
+                    if (p.id === 'A1') impact = -0.65; // Force bankruptcy
+                    if (p.id === 'A3') impact = -0.05; // Force survival (Wealth effect)
+                    if (p.id === 'B2') impact = +0.10; // Flight to safety gain
 
-                // 5. Crisis Logic
-                if (state.view === 'CRISIS') {
-                    document.body.classList.add('crisis-mode');
-                    const grid = document.getElementById('survivor-grid');
-                    grid.innerHTML = state.portfolio.map(p => {
-                        const pct = (p.changePct * 100).toFixed(1);
-                        const color = pct < 0 ? 'text-red-500' : 'text-green-500';
-                        const borderColor = pct < 0 ? 'border-red-500' : 'border-green-500';
+                    const finalVal = p.price * (1 + impact);
+                    const status = impact < -0.3 ? 'LIQUIDATED ☠️' : impact > 0 ? 'WINNER 🏆' : 'SURVIVOR 🛡️';
+                    const statusColor = impact < -0.3 ? 'text-red-500' : impact > 0 ? 'text-green-400' : 'text-yellow-500';
+
+                    return `
+                    <div class="terminal-border p-4 bg-black relative overflow-hidden">
+                        <div class="flex justify-between mb-2">
+                            <span class="font-bold">${p.name}</span>
+                            <span class="${statusColor} font-bold">${status}</span>
+                        </div>
+                        <div class="text-xs text-gray-500 mb-4">${p.desc}</div>
                         
-                        return `
-                        <div class="border ${borderColor} bg-black p-4 font-mono relative overflow-hidden">
-                            <div class="absolute top-0 right-0 p-2 text-xs font-bold ${color}">${p.status}</div>
-                            <h3 class="text-xl font-bold mb-2">${p.name}</h3>
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <span class="block text-gray-500 text-xs">ENTRY PRICE</span>
-                                    <span>${p.entryVal.toFixed(2)} MB</span>
-                                </div>
-                                <div>
-                                    <span class="block text-gray-500 text-xs">POST-CRISIS</span>
-                                    <span class="${color} font-bold">${p.currentVal.toFixed(2)} MB</span>
-                                </div>
+                        <div class="grid grid-cols-2 gap-4 text-xs font-mono">
+                            <div>
+                                <div class="text-gray-600">ENTRY</div>
+                                <div>${p.buyPrice.toFixed(2)} MB</div>
                             </div>
-                            <div class="mt-4 pt-2 border-t border-gray-800 text-xs">
-                                CHANGE: <span class="${color}">${pct}%</span>
-                                ${p.note ? `<br><span class="text-yellow-500">NOTE: ${p.note}</span>` : ''}
+                            <div>
+                                <div class="text-gray-600">FINAL</div>
+                                <div class="${statusColor}">${finalVal.toFixed(2)} MB</div>
                             </div>
                         </div>
-                        `;
-                    }).join('');
-                }
+                        <div class="mt-2 text-[10px] text-gray-400 border-t border-gray-800 pt-2">
+                            CHANGE: <span class="${statusColor}">${(impact*100).toFixed(1)}%</span>
+                        </div>
+                    </div>`;
+                }).join('');
             }
         };
 
-        // --- GLOBAL DISPATCHER FOR HTML ---
-        window.dispatch = (type, payload) => store.dispatch({ type, payload });
-        
-        // --- ASSET RENDERER (Helper) ---
+        // --- GLOBAL RENDERER ---
         window.renderAssets = (zone) => {
             const container = document.getElementById('asset-grid');
-            const assets = ASSET_DB.filter(a => a.zone === zone);
-            
-            container.innerHTML = assets.map(a => `
-                <div class="border border-gray-700 hover:border-green-500 p-3 bg-gray-900/50 transition group relative overflow-hidden">
-                    <div class="flex justify-between items-start mb-2">
-                        <h4 class="font-bold text-sm text-green-400 group-hover:text-white">${a.name}</h4>
-                        <span class="text-xs bg-gray-800 px-1 text-gray-400">${a.price} MB</span>
+            container.innerHTML = store.assets.filter(a => a.zone === zone).map(a => `
+                <div class="border border-gray-800 p-3 hover:border-green-500 bg-gray-900/40 transition group">
+                    <div class="flex justify-between mb-2">
+                        <h4 class="text-sm font-bold text-gray-300 group-hover:text-green-400">${a.name}</h4>
+                        <span class="text-xs bg-gray-800 px-1 text-white">${a.price}M</span>
                     </div>
-                    <p class="text-[10px] text-gray-500 mb-3 h-8">${a.desc}</p>
-                    
-                    <div class="grid grid-cols-2 gap-1 text-[9px] font-mono text-gray-400 mb-3">
+                    <div class="grid grid-cols-2 gap-y-1 text-[10px] text-gray-500 font-mono mb-3">
+                        <div>HPI: <span class="text-gray-300">${a.hpi_real}</span></div>
+                        <div>YIELD: <span class="text-gray-300">${a.yield}%</span></div>
                         <div>BETA: <span class="${a.beta > 1 ? 'text-red-400' : 'text-blue-400'}">${a.beta}</span></div>
-                        <div>RESIL: <span class="${a.resilience < 0.5 ? 'text-red-400' : 'text-green-400'}">${a.resilience}</span></div>
                     </div>
-
-                    <button onclick="dispatch('BUY_ASSET', '${a.id}')" class="w-full btn-terminal text-[10px] py-2">
-                        ACQUIRE POSITION
-                    </button>
+                    <button onclick="dispatch('BUY', '${a.id}')" class="w-full btn-terminal text-[10px] py-2">ACQUIRE</button>
                 </div>
             `).join('');
         };
-
-        // --- INITIALIZE ---
-        UI.init();
-        renderAssets('A'); // Default View
+        
+        window.dispatch = dispatch;
+        window.UI = UI;
 
     </script>
-    
-    <style>
-        /* EXTRA ANIMATIONS */
-        @keyframes marquee {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-        }
-        @keyframes loading {
-            0% { left: -30%; }
-            100% { left: 100%; }
-        }
-        .glitch-effect {
-            text-shadow: 2px 0 #fff, -2px 0 #ff00c1;
-            animation: glitch 1s infinite;
-        }
-        @keyframes glitch {
-            0% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); }
-            40% { transform: translate(-2px, -2px); }
-            60% { transform: translate(2px, 2px); }
-            80% { transform: translate(2px, -2px); }
-            100% { transform: translate(0); }
-        }
-    </style>
 </body>
 </html>
