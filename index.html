@@ -3,553 +3,471 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real Estate Tycoon: The Archetype Strategy</title>
+    <title>Bangkok Property Simulator: The 2-Round Challenge</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; }
-        .modal { transition: opacity 0.25s ease; }
-        body.modal-active { overflow-x: hidden; overflow-y: hidden !important; }
-        .slide-up { animation: slideUp 0.5s ease-out; }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        .fade-in { animation: fadeIn 0.4s ease-in; }
+        .slide-up { animation: slideUp 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        /* Modal Fix */
+        .modal {
+            transition: opacity 0.25s ease;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0,0,0,0.6);
+            z-index: 50;
+        }
+        .hidden { display: none !important; }
     </style>
 </head>
-<body class="text-slate-800 antialiased">
+<body class="text-slate-800">
 
-    <nav class="fixed top-0 w-full bg-slate-900 text-white z-50 shadow-lg px-6 py-3 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <span class="text-xl font-bold text-yellow-400">🏙️ RE Tycoon</span>
-            <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">Beta v2.0</span>
-        </div>
-        <div class="flex gap-6 text-sm font-mono">
-            <div>🗓️ Year: <span id="ui-year" class="font-bold text-blue-400">2019</span></div>
-            <div>💰 Cash: <span id="ui-cash" class="font-bold text-green-400">0</span> THB</div>
-            <div>📜 Portfolio: <span id="ui-assets">0</span> Unit</div>
+    <nav class="bg-slate-900 text-white p-4 sticky top-0 z-40 shadow-md">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="font-bold text-yellow-400 text-lg">🏙️ BKK Property Sim</h1>
+            <div class="text-sm space-x-4 font-mono">
+                <span>🗓️ Year: <span id="nav-year" class="text-blue-400 font-bold">2019</span></span>
+                <span>💰 Cash: <span id="nav-cash" class="text-green-400 font-bold">0</span></span>
+            </div>
         </div>
     </nav>
 
-    <div id="game-container" class="pt-20 pb-10 max-w-5xl mx-auto px-4 min-h-screen flex flex-col justify-center">
-
-        <section id="scene-char" class="slide-up">
-            <h1 class="text-4xl font-bold text-center mb-4">เลือกโปรไฟล์นักลงทุนของคุณ</h1>
-            <p class="text-center text-slate-500 mb-8">รายได้ของคุณคือกุญแจสำคัญในการ "รอ" หรือ "เริ่ม"</p>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div onclick="startGame('junior')" class="bg-white p-6 rounded-xl shadow hover:shadow-xl cursor-pointer border-2 border-transparent hover:border-blue-500 transition">
-                    <div class="text-5xl mb-4">🛵</div>
-                    <h3 class="text-xl font-bold">First Jobber</h3>
-                    <p class="text-sm text-slate-500">Salary: 25,000 / mo</p>
-                    <p class="text-xs text-red-500 mt-2">ข้อจำกัด: เข้าถึงได้เฉพาะ Type 1 ในช่วงแรก</p>
+    <main id="app" class="max-w-4xl mx-auto p-6 min-h-screen">
+        
+        <section id="scene-intro" class="fade-in">
+            <div class="bg-white rounded-xl p-8 shadow-lg text-center border-t-4 border-blue-600">
+                <h2 class="text-3xl font-extrabold mb-4">ยินดีต้อนรับสู่น่านน้ำอสังหาฯ</h2>
+                <div class="bg-yellow-50 text-yellow-800 p-4 rounded-lg mb-8 text-left border border-yellow-200">
+                    <h3 class="font-bold text-lg mb-2">📢 กติกาการเล่น (โปรดอ่าน):</h3>
+                    <ul class="list-disc list-inside space-y-2 text-sm">
+                        <li>เกมจะแบ่งเป็น <b>2 รอบการตัดสินใจ</b> (Round 1: ปี 2019 และ Round 2: ปี 2022)</li>
+                        <li>คุณต้องบริหารเงินหน้าตักเพื่อเลือกซื้อ Asset ให้ถูกต้องในแต่ละช่วงเวลา</li>
+                        <li><b>Goal:</b> ตอนจบเกม (ปี 2024) เราจะเปรียบเทียบว่า Asset ที่คุณเลือกในรอบแรก กับรอบสอง อันไหนสร้างผลตอบแทนได้ดีกว่ากัน</li>
+                    </ul>
                 </div>
-                <div onclick="startGame('senior')" class="bg-white p-6 rounded-xl shadow hover:shadow-xl cursor-pointer border-2 border-transparent hover:border-purple-500 transition">
-                    <div class="text-5xl mb-4">🚗</div>
-                    <h3 class="text-xl font-bold">Manager</h3>
-                    <p class="text-sm text-slate-500">Salary: 80,000 / mo</p>
-                    <p class="text-xs text-blue-500 mt-2">สมดุล: มีทางเลือกในการกู้และรอสะสมเงิน</p>
-                </div>
-                <div onclick="startGame('investor')" class="bg-white p-6 rounded-xl shadow hover:shadow-xl cursor-pointer border-2 border-transparent hover:border-amber-500 transition">
-                    <div class="text-5xl mb-4">🏎️</div>
-                    <h3 class="text-xl font-bold">Executive Investor</h3>
-                    <p class="text-sm text-slate-500">Salary: 250,000 / mo</p>
-                    <p class="text-xs text-green-600 mt-2">อิสระ: ซื้อ Type 3 (Luxury) ได้ตั้งแต่เริ่ม</p>
+                
+                <p class="mb-4 text-slate-500">เลือกสถานะทางการเงินเริ่มต้นของคุณ:</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button onclick="startGame(1)" class="p-6 border-2 border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition">
+                        <div class="text-4xl mb-2">🎒</div>
+                        <div class="font-bold">Junior</div>
+                        <div class="text-xs text-slate-500">เงินเดือน 25,000</div>
+                        <div class="text-xs text-slate-500">เงินเก็บ 300,000</div>
+                    </button>
+                    <button onclick="startGame(2)" class="p-6 border-2 border-slate-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition">
+                        <div class="text-4xl mb-2">💼</div>
+                        <div class="font-bold">Manager</div>
+                        <div class="text-xs text-slate-500">เงินเดือน 70,000</div>
+                        <div class="text-xs text-slate-500">เงินเก็บ 1,500,000</div>
+                    </button>
+                    <button onclick="startGame(3)" class="p-6 border-2 border-slate-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition">
+                        <div class="text-4xl mb-2">👑</div>
+                        <div class="font-bold">Executive</div>
+                        <div class="text-xs text-slate-500">เงินเดือน 200,000</div>
+                        <div class="text-xs text-slate-500">เงินเก็บ 5,000,000</div>
+                    </button>
                 </div>
             </div>
         </section>
 
-        <section id="scene-action" class="hidden slide-up text-center">
-            <h2 class="text-3xl font-bold mb-2">Round <span id="round-num">1</span>: Year <span id="round-year">2019</span></h2>
-            <div class="bg-blue-50 p-4 rounded-lg inline-block mb-8 border-l-4 border-blue-600 text-left max-w-2xl">
-                <p class="font-bold text-blue-800">📊 Market Sentiment:</p>
-                <p id="market-news" class="text-sm text-blue-900">ช่วงเวลาแห่งความคาดหวัง รถไฟฟ้าสายสีน้ำเงินกำลังบูมสุดขีด...</p>
+        <section id="scene-action" class="hidden slide-up">
+            <div class="text-center mb-8">
+                <span class="bg-slate-800 text-white px-3 py-1 rounded-full text-xs uppercase tracking-wide">Round <span id="round-display">1</span> / 2</span>
+                <h2 class="text-4xl font-bold mt-2">Year <span id="year-display">2019</span></h2>
+                <p id="news-ticker" class="text-blue-600 font-medium mt-2 animate-pulse">ข่าว: รถไฟฟ้าสายสีน้ำเงินกำลังบูมสุดขีด...</p>
             </div>
 
-            <div class="flex justify-center gap-8">
-                <button onclick="goToMap()" class="group relative w-64 bg-white border-2 border-slate-200 rounded-2xl p-6 hover:border-blue-600 hover:shadow-lg transition text-left">
-                    <div class="absolute -top-3 -right-3 bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow animate-bounce">แนะนำ</div>
-                    <div class="text-4xl mb-2">🏢</div>
-                    <h3 class="text-xl font-bold text-slate-800 group-hover:text-blue-600">ลงทุนทันที</h3>
-                    <p class="text-sm text-slate-500 mt-1">เลือกซื้อสินทรัพย์เข้าพอร์ตเพื่อเริ่มทำกำไร</p>
-                </button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div onclick="goToMap()" class="cursor-pointer bg-white p-8 rounded-xl shadow-md border-2 border-transparent hover:border-blue-500 hover:shadow-xl transition group">
+                    <div class="text-5xl mb-4 group-hover:scale-110 transition-transform">🏢</div>
+                    <h3 class="text-2xl font-bold text-slate-800">ลงทุนซื้อคอนโด</h3>
+                    <p class="text-slate-500 mt-2">ใช้เงินเก็บที่มี เลือกสินทรัพย์เข้าพอร์ตทันที</p>
+                </div>
 
-                <button onclick="skipYears()" class="group w-64 bg-white border-2 border-slate-200 rounded-2xl p-6 hover:border-green-600 hover:shadow-lg transition text-left">
-                    <div class="text-4xl mb-2">⏳</div>
-                    <h3 class="text-xl font-bold text-slate-800 group-hover:text-green-600">รอและออมเงิน</h3>
-                    <p class="text-sm text-slate-500 mt-1">ข้ามไป 2 ปี สะสมเงินเดือนเพื่อซื้อของใหญ่ขึ้น</p>
-                    <p class="text-xs text-green-600 font-bold mt-2">+ Cash from Salary</p>
-                </button>
+                <div onclick="skipRound()" class="cursor-pointer bg-white p-8 rounded-xl shadow-md border-2 border-transparent hover:border-green-500 hover:shadow-xl transition group">
+                    <div class="text-5xl mb-4 group-hover:scale-110 transition-transform">⏳</div>
+                    <h3 class="text-2xl font-bold text-slate-800">เก็บเงินรอ (Skip)</h3>
+                    <p class="text-slate-500 mt-2">ข้ามการลงทุนรอบนี้ เพื่อสะสมเงินเดือนและโบนัสไปซื้อรอบหน้า</p>
+                    <p class="text-xs text-green-600 font-bold mt-4">+ ได้รับเงินสะสมเพิ่มขึ้น</p>
+                </div>
             </div>
         </section>
 
         <section id="scene-map" class="hidden slide-up">
-            <button onclick="backToAction()" class="text-sm text-slate-500 hover:text-slate-800 mb-4">← Back</button>
-            <h2 class="text-2xl font-bold mb-6 text-center">เลือกทำเลศักยภาพ (Bangkok Zones)</h2>
+            <button onclick="showScene('scene-action')" class="mb-4 text-slate-500 hover:text-slate-800 font-bold">← ย้อนกลับ</button>
+            <h2 class="text-2xl font-bold mb-6 text-center">เลือกทำเล (District)</h2>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div onclick="selectDistrict('A')" class="bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer hover:ring-4 ring-blue-400 transition relative group">
-                    <div class="h-32 bg-gradient-to-r from-blue-900 to-indigo-800 flex items-center justify-center">
-                        <span class="text-4xl">🌃</span>
+                <button onclick="selectDistrict('A')" class="bg-white rounded-xl shadow p-6 text-left border hover:border-blue-500 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold px-2 py-1">High Volatility</div>
+                    <h3 class="text-xl font-bold">📍 Huai Khwang (Zone A)</h3>
+                    <p class="text-sm text-slate-500 mt-1">New CBD Extension, Chinese Hub</p>
+                    <div class="mt-4 flex gap-2 text-xs">
+                        <span class="bg-slate-100 px-2 py-1 rounded">Avg Price: High</span>
+                        <span class="bg-slate-100 px-2 py-1 rounded">Growth: High</span>
                     </div>
-                    <div class="p-6">
-                        <div class="flex justify-between items-center mb-2">
-                            <h3 class="text-xl font-bold">District A: Huai Khwang</h3>
-                            <span class="bg-red-100 text-red-600 text-xs px-2 py-1 rounded font-bold">Hot Zone 🔥</span>
-                        </div>
-                        <p class="text-sm text-slate-500 mb-4">New CBD Extension & Chinese Hub</p>
-                        
-                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                            <div class="bg-slate-50 p-2 rounded">
-                                <div class="font-bold text-green-600">+8.5%</div>
-                                <div class="text-slate-400">Avg Growth</div>
-                            </div>
-                            <div class="bg-slate-50 p-2 rounded">
-                                <div class="font-bold">135k</div>
-                                <div class="text-slate-400">Avg Price/Sqm</div>
-                            </div>
-                            <div class="bg-slate-50 p-2 rounded">
-                                <div class="font-bold">High</div>
-                                <div class="text-slate-400">Supply</div>
-                            </div>
-                        </div>
-                        <div class="mt-4 text-xs text-slate-400 italic">"ค่าเฉลี่ยดูดี แต่ระวังความเหลื่อมล้ำ..."</div>
-                    </div>
-                </div>
+                </button>
 
-                <div onclick="selectDistrict('B')" class="bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer hover:ring-4 ring-green-400 transition opacity-70 hover:opacity-100">
-                    <div class="h-32 bg-gradient-to-r from-green-800 to-teal-700 flex items-center justify-center">
-                        <span class="text-4xl">🚉</span>
+                <button onclick="selectDistrict('B')" class="bg-white rounded-xl shadow p-6 text-left border hover:border-green-500 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-2 py-1">Stable</div>
+                    <h3 class="text-xl font-bold">📍 Bang Sue (Zone B)</h3>
+                    <p class="text-sm text-slate-500 mt-1">Transportation Hub</p>
+                    <div class="mt-4 flex gap-2 text-xs">
+                        <span class="bg-slate-100 px-2 py-1 rounded">Avg Price: Medium</span>
+                        <span class="bg-slate-100 px-2 py-1 rounded">Growth: Moderate</span>
                     </div>
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2">District B: Bang Sue</h3>
-                        <p class="text-sm text-slate-500 mb-4">Transportation Hub & Government Complex</p>
-                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                            <div class="bg-slate-50 p-2 rounded">
-                                <div class="font-bold text-green-600">+3.2%</div>
-                                <div class="text-slate-400">Avg Growth</div>
-                            </div>
-                            <div class="bg-slate-50 p-2 rounded">
-                                <div class="font-bold">95k</div>
-                                <div class="text-slate-400">Avg Price/Sqm</div>
-                            </div>
-                            <div class="bg-slate-50 p-2 rounded">
-                                <div class="font-bold">Med</div>
-                                <div class="text-slate-400">Supply</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                </button>
             </div>
         </section>
 
         <section id="scene-archetype" class="hidden slide-up pb-20">
-            <button onclick="show('scene-map')" class="text-sm text-slate-500 hover:text-slate-800 mb-4">← Back to Map</button>
-            <h2 class="text-2xl font-bold mb-2">Select Archetype in <span id="selected-district-name" class="text-blue-600"></span></h2>
-            <p class="text-sm text-slate-500 mb-6">กดปุ่ม "🔍 วิเคราะห์" เพื่อดูข้อมูลเชิงลึกก่อนตัดสินใจซื้อ</p>
+            <button onclick="showScene('scene-map')" class="mb-4 text-slate-500 hover:text-slate-800 font-bold">← เลือกทำเลใหม่</button>
+            <h2 class="text-2xl font-bold mb-2">เลือกประเภทสินทรัพย์ (Archetype)</h2>
+            <p class="text-sm text-slate-500 mb-6">คลิก "🔍 วิเคราะห์" เพื่อดูข้อมูลเชิงลึก</p>
 
-            <div id="archetype-list" class="space-y-4">
+            <div id="archetype-container" class="space-y-4">
                 </div>
         </section>
 
         <section id="scene-result" class="hidden slide-up">
-            <h2 class="text-3xl font-bold text-center mb-6">The Final Showdown (2024)</h2>
+            <h2 class="text-3xl font-bold text-center mb-6">บทสรุปการลงทุน (Year 2024)</h2>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                <div class="bg-white p-6 rounded-xl shadow border-t-4 border-blue-500">
-                    <h3 class="font-bold text-lg text-slate-400">Round 1 Choice</h3>
-                    <div class="text-2xl font-bold mb-2" id="res-name-1">-</div>
-                    <div class="flex justify-between text-sm border-b py-2">
-                        <span>Bought Price:</span>
-                        <span id="res-buy-1">-</span>
-                    </div>
-                    <div class="flex justify-between text-sm border-b py-2">
-                        <span>Current Price (2024):</span>
-                        <span id="res-curr-1" class="font-bold">-</span>
-                    </div>
-                    <div class="flex justify-between text-sm pt-2">
-                        <span>Total Gain (Price+Rent):</span>
-                        <span id="res-gain-1" class="font-bold">-</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow border-l-8 border-blue-500">
+                    <h3 class="font-bold text-slate-400 text-sm uppercase">Round 1 Decision (2019)</h3>
+                    <h4 class="text-xl font-bold mt-1" id="r1-name">-</h4>
+                    <p class="text-sm mt-2">ซื้อ: <span id="r1-buy">-</span></p>
+                    <p class="text-sm">มูลค่าปัจจุบัน: <span id="r1-curr" class="font-bold">-</span></p>
+                    <div class="mt-4 pt-4 border-t flex justify-between items-center">
+                        <span class="text-xs">Profit (Price+Rent)</span>
+                        <span id="r1-profit" class="text-xl font-bold">-</span>
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-xl shadow border-t-4 border-purple-500">
-                    <h3 class="font-bold text-lg text-slate-400">Round 2 Choice</h3>
-                    <div class="text-2xl font-bold mb-2" id="res-name-2">-</div>
-                    <div class="flex justify-between text-sm border-b py-2">
-                        <span>Bought Price:</span>
-                        <span id="res-buy-2">-</span>
-                    </div>
-                    <div class="flex justify-between text-sm border-b py-2">
-                        <span>Current Price (2024):</span>
-                        <span id="res-curr-2" class="font-bold">-</span>
-                    </div>
-                    <div class="flex justify-between text-sm pt-2">
-                        <span>Total Gain (Price+Rent):</span>
-                        <span id="res-gain-2" class="font-bold">-</span>
+                <div class="bg-white p-6 rounded-xl shadow border-l-8 border-purple-500">
+                    <h3 class="font-bold text-slate-400 text-sm uppercase">Round 2 Decision (2022)</h3>
+                    <h4 class="text-xl font-bold mt-1" id="r2-name">-</h4>
+                    <p class="text-sm mt-2">ซื้อ: <span id="r2-buy">-</span></p>
+                    <p class="text-sm">มูลค่าปัจจุบัน: <span id="r2-curr" class="font-bold">-</span></p>
+                    <div class="mt-4 pt-4 border-t flex justify-between items-center">
+                        <span class="text-xs">Profit (Price+Rent)</span>
+                        <span id="r2-profit" class="text-xl font-bold">-</span>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-slate-800 text-white p-8 rounded-xl shadow-2xl">
-                <h3 class="text-xl font-bold text-yellow-400 mb-4">💡 บทเรียนจากห้วยขวาง (The Tale of Two Markets)</h3>
-                <div class="space-y-4 text-sm font-light">
-                    <p>
-                        <span class="font-bold text-white">1. [cite_start]กับดักค่าเฉลี่ย:</span> สังเกตว่า HPI ของ District A ดูสูง แต่ถ้าคุณเลือก <span class="text-red-400">Type 1 (Entry)</span> คุณอาจจะแพ้ตลาด เพราะ Supply ล้นและลูกค้าเปราะบาง (Laggard) [cite: 56, 63]
-                    </p>
-                    <p>
-                        <span class="font-bold text-white">2. [cite_start]The K-Shaped Recovery:</span> ถ้าคุณเลือก <span class="text-green-400">Type 3 (Prime)</span> คุณจะชนะขาดลอย เพราะเป็น "ของสะสม" ที่คนรวยแย่งกันซื้อในปี 2021-2023 สวนทางกับเศรษฐกิจ [cite: 60, 65]
-                    </p>
-                    <p>
-                        <span class="font-bold text-white">3. การรอคอย (Skipping):</span> บางครั้งการ "ไม่ซื้อ" ในรอบแรก เพื่อเก็บเงินไปซื้อ "ของที่ดีกว่า (Archetype ที่ถูกต้อง)" ในรอบสอง อาจสร้างผลตอบแทนได้มากกว่าการรีบซื้อของถูก
-                    </p>
+            <div class="bg-slate-800 text-white p-6 rounded-xl shadow-lg">
+                <h3 class="text-xl font-bold text-yellow-400 mb-2">💡 Analysis: สิ่งที่คุณได้เรียนรู้</h3>
+                <div class="text-sm space-y-3 font-light">
+                    <p>1. <b>Timing Matters:</b> การซื้อปี 2019 (ก่อนโควิด) อาจไม่ใช่เรื่องดีเสมอไป โดยเฉพาะถ้าซื้อ <span class="text-red-400 font-bold">Type 1 (Mass Market)</span> ที่ราคาดิ่งลงเหวในช่วงวิกฤต</p>
+                    <p>2. <b>Archetype is King:</b> สังเกตว่า <span class="text-green-400 font-bold">Type 3 (Luxury)</span> ราคาพุ่งสวนทางตลาด (K-Shaped Recovery) เพราะเป็นของหายากและจับกลุ่มคนมีกำลังซื้อสูง</p>
+                    <p>3. <b>Saving Strategy:</b> การข้ามรอบแรกเพื่อ "เก็บเงิน" ไปปลดล็อค Archetype แพงๆ ในรอบสอง อาจเป็นกลยุทธ์ที่ชนะเลิศ</p>
                 </div>
-                <button onclick="location.reload()" class="mt-6 w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-bold py-3 rounded">Play Again</button>
+                <button onclick="location.reload()" class="mt-6 w-full py-3 bg-blue-600 hover:bg-blue-700 rounded font-bold">เริ่มเกมใหม่</button>
             </div>
         </section>
 
-    </div>
+    </main>
 
-    <div id="analysis-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-slide-up">
-            <div class="bg-slate-900 text-white p-4 flex justify-between items-center">
-                <h3 class="font-bold text-lg">📁 Confidential Analysis Report</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white">✕</button>
+    <div id="modal-analysis" class="modal hidden">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-slide-up">
+            <div class="bg-slate-900 p-4 text-white flex justify-between items-center">
+                <h3 class="font-bold">📊 Asset Analysis</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
             </div>
+            
             <div class="p-6">
-                <h2 class="text-2xl font-bold text-blue-800 mb-1" id="modal-title">Type Name</h2>
-                <p class="text-sm text-slate-500 mb-4 italic" id="modal-subtitle">"The Catchphrase"</p>
+                <h2 id="m-title" class="text-2xl font-bold text-slate-800 mb-1">Type Name</h2>
+                <p id="m-price" class="text-lg font-mono text-blue-600 font-bold mb-4">Price: 0 THB</p>
 
-                <div class="space-y-3 mb-6">
-                    <div>
-                        <div class="flex justify-between text-xs mb-1"><span>Rental Yield (ปล่อยเช่า)</span><span class="font-bold" id="modal-yield">High</span></div>
-                        <div class="w-full bg-slate-200 rounded-full h-2"><div id="bar-yield" class="bg-green-500 h-2 rounded-full" style="width: 80%"></div></div>
+                <div class="space-y-4 mb-6">
+                    <div class="bg-slate-50 p-3 rounded border">
+                        <h4 class="font-bold text-xs text-slate-400 uppercase">SWOT: Strengths</h4>
+                        <p id="m-strength" class="text-sm text-green-700">...</p>
                     </div>
-                    <div>
-                        <div class="flex justify-between text-xs mb-1"><span>Capital Gain (ราคาขึ้น)</span><span class="font-bold" id="modal-cap">Low</span></div>
-                        <div class="w-full bg-slate-200 rounded-full h-2"><div id="bar-cap" class="bg-blue-500 h-2 rounded-full" style="width: 30%"></div></div>
+                    <div class="bg-slate-50 p-3 rounded border">
+                        <h4 class="font-bold text-xs text-slate-400 uppercase">SWOT: Weaknesses & Threats</h4>
+                        <p id="m-weakness" class="text-sm text-red-700">...</p>
                     </div>
-                    <div>
-                        <div class="flex justify-between text-xs mb-1"><span>Risk (ความเสี่ยง)</span><span class="font-bold" id="modal-risk">High</span></div>
-                        <div class="w-full bg-slate-200 rounded-full h-2"><div id="bar-risk" class="bg-red-500 h-2 rounded-full" style="width: 90%"></div></div>
+                    <div class="bg-slate-50 p-3 rounded border">
+                        <h4 class="font-bold text-xs text-slate-400 uppercase">Target Audience</h4>
+                        <p id="m-target" class="text-sm text-slate-700">...</p>
                     </div>
                 </div>
 
-                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm space-y-2 mb-6">
-                    <p><b>🎯 Target:</b> <span id="modal-target">...</span></p>
-                    <p><b>📍 Location:</b> <span id="modal-loc">...</span></p>
-                    <p><b>⚠️ Warning:</b> <span id="modal-warn" class="text-red-600">...</span></p>
-                </div>
-
-                <div class="flex gap-4">
-                    <button onclick="closeModal()" class="flex-1 border border-slate-300 py-2 rounded hover:bg-slate-50">Back</button>
-                    <button onclick="confirmBuy()" class="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 font-bold shadow-lg">Confirm Buy</button>
+                <div class="flex gap-3">
+                    <button onclick="closeModal()" class="flex-1 py-3 border border-slate-300 rounded hover:bg-slate-50">ปิด</button>
+                    <button id="btn-confirm-buy" onclick="confirmBuy()" class="flex-1 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold shadow">ยืนยันการซื้อ</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- GAME DATA ---
-        const gameState = {
+        // --- GAME STATE ---
+        let state = {
             cash: 0,
             salary: 0,
             year: 2019,
             round: 1,
-            inventory: [],
-            selectedDistrict: null,
-            tempSelection: null // For modal
+            portfolio: [],
+            tempItem: null
         };
 
-        [cite_start]// Source Data Mapping [cite: 1-27, 30-34, 61-66]
+        // --- DATA [Sources: 1-72] ---
         const archetypes = {
             'A': [ // Huai Khwang
                 {
                     id: 'A1',
-                    name: 'Type 1: The Entry Level',
-                    [cite_start]quote: '"ห้องเล็ก สเปคประหยัด เพื่อก้าวแรกในเมือง" [cite: 2]',
+                    name: 'Type 1: Entry Level',
                     price: 2200000,
-                    stats: { yield: 80, cap: 30, risk: 90 }, // Visual %
-                    details: {
-                        yield: 'High (Initial)',
-                        cap: 'Low (Stagnant)',
-                        risk: 'High (Volatility)',
-                        [cite_start]target: 'First Jobber / นักศึกษา [cite: 8]',
-                        [cite_start]loc: 'Deep Soi / ห่าง MRT เกิน 800m [cite: 6]',
-                        [cite_start]warn: 'ราคาขึ้นยาก (Capital Gain ตื้อ) คู่แข่งเยอะมาก และเสี่ยงสูงเวลาเศรษฐกิจแย่ [cite: 9, 31]'
-                    },
-                    growthCurve: [1.0, 0.85, 0.82, 0.80, 0.81, 0.78] // Crash hard
+                    desc: 'ห้องเล็กในซอยลึก (Deep Soi)',
+                    strength: 'ราคาถูก เข้าถึงง่าย ปล่อยเช่า Mass Market ได้เร็ว',
+                    weakness: 'คู่แข่งเยอะมาก (Red Ocean) ราคาตกง่ายเวลาศก.แย่',
+                    target: 'First Jobber / นักศึกษา',
+                    growth: [1.0, 0.85, 0.82, 0.80, 0.81, 0.78] // 2019-2024 Index
                 },
                 {
                     id: 'A2',
-                    name: 'Type 2: The Real Demand',
-                    [cite_start]quote: '"ทางสายกลาง ของคนทำงานตัวจริง" [cite: 11]',
+                    name: 'Type 2: Real Demand',
                     price: 4500000,
-                    stats: { yield: 60, cap: 60, risk: 40 },
-                    details: {
-                        yield: 'Medium',
-                        cap: 'Medium (Inflation hedge)',
-                        risk: 'Medium',
-                        [cite_start]target: 'White Collar / Senior Officer [cite: 17]',
-                        [cite_start]loc: 'เดินถึง MRT ได้ (400-700m) [cite: 15]',
-                        [cite_start]warn: 'เป็น Safe Haven สภาพคล่องดี แต่ไม่ได้กำไรหวือหวา [cite: 18]'
-                    },
-                    growthCurve: [1.0, 0.95, 0.96, 0.98, 1.02, 1.05] // Stable
+                    desc: 'Standard Condo ใกล้ MRT',
+                    strength: 'สมดุลดี เป็น Safe Haven สภาพคล่องสูง',
+                    weakness: 'กำไรกลางๆ ไม่หวือหวา ชนะเงินเฟ้อเล็กน้อย',
+                    target: 'White Collar / Senior Officer',
+                    growth: [1.0, 0.95, 0.96, 0.98, 1.02, 1.05]
                 },
                 {
                     id: 'A3',
-                    name: 'Type 3: Prime & Prestige',
-                    [cite_start]quote: '"ของสะสม ของคนระดับบน" [cite: 20]',
+                    name: 'Type 3: Prime Luxury',
                     price: 12000000,
-                    stats: { yield: 50, cap: 95, risk: 20 },
-                    details: {
-                        yield: 'Low (Entry expensive)',
-                        cap: 'Very High (Scarcity)',
-                        risk: 'Low (Long term)',
-                        [cite_start]target: 'Expat / นักลงทุน / ผู้บริหาร [cite: 26]',
-                        [cite_start]loc: 'ติดถนนใหญ่ / ติด MRT [cite: 24]',
-                        [cite_start]warn: 'ราคาเข้าสูงมาก แต่ถ้าหลุดมาในโซน Undervalued คือ Jackpot [cite: 34]'
-                    },
-                    growthCurve: [1.0, 1.05, 1.30, 1.45, 1.60, 1.75] // Moon
+                    desc: 'High-End ติดถนนใหญ่/MRT',
+                    strength: 'Scarcity Value (หายาก) ราคาพุ่งแรงเมื่อจีนกลับมา',
+                    weakness: 'ราคาสูงมาก ต้องใช้เงินเย็น ถือยาว',
+                    target: 'Expat / Wealthy Investors',
+                    growth: [1.0, 1.05, 1.30, 1.45, 1.60, 1.75]
                 }
             ],
-            'B': [ // Boring Zone
-                 {
+            'B': [ // Bang Sue
+                {
                     id: 'B1',
-                    name: 'Type 1: Budget Outer Ring',
-                    quote: 'คอนโดชานเมือง ราคาประหยัด',
+                    name: 'Type 1: Budget Outer',
                     price: 1500000,
-                    stats: { yield: 70, cap: 20, risk: 50 },
-                    details: { target: 'Local Workers', loc: 'Outer Ring', warn: 'ราคาแทบไม่ขยับ' },
-                    growthCurve: [1.0, 0.98, 0.97, 0.98, 0.99, 1.00]
+                    desc: 'คอนโดชานเมือง',
+                    strength: 'ราคาถูกสุดๆ',
+                    weakness: 'Over supply หนักมาก ราคาแทบไม่ขยับ',
+                    target: 'Factory Workers',
+                    growth: [1.0, 0.98, 0.97, 0.96, 0.97, 0.98]
                 },
                 {
                     id: 'B2',
-                    name: 'Type 2: Transport Hub',
-                    quote: 'ใกล้สถานีกลางฯ มั่นคง',
+                    name: 'Type 2: Hub Station',
                     price: 3500000,
-                    stats: { yield: 50, cap: 50, risk: 30 },
-                    details: { target: 'Commuters', loc: 'Near Hub', warn: 'โตช้าๆ มั่นคง' },
-                    growthCurve: [1.0, 1.01, 1.02, 1.03, 1.05, 1.08]
+                    desc: 'ใกล้สถานีกลางฯ',
+                    strength: 'Infrastructure รองรับดี มั่นคงในระยะยาว',
+                    weakness: 'Supply เยอะ แต่ Demand โตช้ากว่าเมือง',
+                    target: 'Commuters',
+                    growth: [1.0, 1.02, 1.03, 1.05, 1.07, 1.10]
                 }
             ]
         };
 
-        // --- FUNCTIONS ---
-
-        function show(id) {
+        // --- CORE FUNCTIONS ---
+        function showScene(id) {
             document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
         }
 
         function updateUI() {
-            document.getElementById('ui-cash').innerText = gameState.cash.toLocaleString();
-            document.getElementById('ui-year').innerText = gameState.year;
-            document.getElementById('ui-assets').innerText = gameState.inventory.length;
-            document.getElementById('round-num').innerText = gameState.round;
-            document.getElementById('round-year').innerText = gameState.year;
+            document.getElementById('nav-cash').innerText = state.cash.toLocaleString();
+            document.getElementById('nav-year').innerText = state.year;
+            document.getElementById('round-display').innerText = state.round;
+            document.getElementById('year-display').innerText = state.year;
+            
+            // News Ticker logic
+            const news = state.year === 2019 
+                ? "2019: ยุครุ่งเรืองก่อนพายุ... ตลาดคึกคักสุดขีด" 
+                : "2022: เริ่มเปิดประเทศ... ตลาดฟื้นตัวแบบ K-Shaped (รวยกระจุก จนกระจาย)";
+            document.getElementById('news-ticker').innerText = news;
         }
 
-        function startGame(role) {
-            if(role === 'junior') { gameState.salary = 25000; gameState.cash = 500000; }
-            if(role === 'senior') { gameState.salary = 80000; gameState.cash = 2000000; }
-            if(role === 'investor') { gameState.salary = 250000; gameState.cash = 10000000; }
+        function startGame(level) {
+            if(level === 1) { state.salary = 25000; state.cash = 300000; }
+            if(level === 2) { state.salary = 70000; state.cash = 1500000; }
+            if(level === 3) { state.salary = 200000; state.cash = 5000000; }
+            
+            state.year = 2019;
+            state.round = 1;
+            state.portfolio = [];
             
             updateUI();
-            show('scene-action');
-        }
-
-        function skipYears() {
-            // Logic: Skip 3 years (2019 -> 2022)
-            const yearsSkipped = 3;
-            const savings = (gameState.salary * 12 * yearsSkipped) * 0.5; // Save 50% of salary
-            gameState.cash += savings;
-            gameState.year += yearsSkipped;
-            
-            alert(`คุณเลือกที่จะรอ... ผ่านไป 3 ปี คุณเก็บเงินเพิ่มได้ ${savings.toLocaleString()} บาท`);
-            
-            // If Round 1, move to Round 2 immediately? Or just update state?
-            // For simplicity: If skip in Round 1 -> Go to Round 2 directly.
-            if(gameState.round === 1) {
-                gameState.round = 2;
-                gameState.year = 2022; // Set exact
-                
-                // Add "Skipped" placeholder to inventory 1
-                gameState.inventory.push({ type: 'skipped', name: 'Saving (No Asset)', price: 0, yearBought: 2019 });
-                
-                document.getElementById('market-news').innerText = "ปี 2022: เริ่มเปิดประเทศ สัญญาณการฟื้นตัวแบบ K-Shape เริ่มชัดเจน...";
-                updateUI();
-                show('scene-action');
-            } else {
-                // If skip in Round 2 -> End Game
-                gameState.inventory.push({ type: 'skipped', name: 'Saving (No Asset)', price: 0, yearBought: 2022 });
-                endGame();
-            }
+            showScene('scene-action');
         }
 
         function goToMap() {
-            show('scene-map');
+            showScene('scene-map');
         }
 
-        function backToAction() {
-            show('scene-action');
-        }
-
-        function selectDistrict(d) {
-            gameState.selectedDistrict = d;
-            const districtName = d === 'A' ? 'Huai Khwang' : 'Bang Sue';
-            document.getElementById('selected-district-name').innerText = districtName;
+        function skipRound() {
+            // Logic: Skip 3 years of savings (50% saving rate)
+            const savings = (state.salary * 12 * 3) * 0.5;
+            state.cash += savings;
             
-            // Render Archetypes
-            const container = document.getElementById('archetype-list');
-            container.innerHTML = '';
-            
-            const list = archetypes[d];
-            list.forEach(item => {
-                const canAfford = gameState.cash >= (item.price * 0.1); // Down payment 10%
-                const btnClass = canAfford ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed';
-                
-                const html = `
-                <div class="bg-white border rounded-xl p-4 flex justify-between items-center shadow-sm">
-                    <div>
-                        <h4 class="font-bold text-lg">${item.name}</h4>
-                        <p class="text-xs text-slate-500">${item.quote}</p>
-                        <p class="font-mono text-sm mt-1">Price: ${(item.price/1000000).toFixed(1)} MB</p>
-                    </div>
-                    <button onclick="openAnalysis('${item.id}')" class="px-4 py-2 rounded-lg font-bold text-sm ${btnClass}">
-                        🔍 วิเคราะห์
-                    </button>
-                </div>`;
-                container.innerHTML += html;
+            // Record skipping
+            state.portfolio.push({
+                type: 'skipped',
+                name: 'Saving (Wait)',
+                buyPrice: 0,
+                yearBought: state.year
             });
 
-            show('scene-archetype');
+            alert(`คุณเลือกที่จะรอ... ผ่านไป 3 ปี คุณเก็บเงินเพิ่มได้ ${savings.toLocaleString()} บาท`);
+            advanceRound();
         }
 
-        function openAnalysis(id) {
-            const list = archetypes[gameState.selectedDistrict];
-            const item = list.find(x => x.id === id);
-            gameState.tempSelection = item;
+        function selectDistrict(zone) {
+            const list = archetypes[zone];
+            const container = document.getElementById('archetype-container');
+            container.innerHTML = '';
 
-            // Fill Modal Data
-            document.getElementById('modal-title').innerText = item.name;
-            document.getElementById('modal-subtitle').innerText = item.quote;
-            
-            document.getElementById('bar-yield').style.width = item.stats.yield + '%';
-            document.getElementById('modal-yield').innerText = item.details.yield;
-            
-            document.getElementById('bar-cap').style.width = item.stats.cap + '%';
-            document.getElementById('modal-cap').innerText = item.details.cap;
-            
-            document.getElementById('bar-risk').style.width = item.stats.risk + '%';
-            document.getElementById('modal-risk').innerText = item.details.risk;
+            list.forEach(item => {
+                // Down Payment 15% check
+                const downPayment = item.price * 0.15;
+                const canAfford = state.cash >= downPayment;
+                const btnStyle = canAfford ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed';
+                const statusText = canAfford ? 'พร้อมซื้อ (ดาวน์ 15%)' : 'เงินสดไม่พอจ่ายดาวน์';
 
-            document.getElementById('modal-target').innerText = item.details.target;
-            document.getElementById('modal-loc').innerText = item.details.loc;
-            document.getElementById('modal-warn').innerText = item.details.warn;
+                container.innerHTML += `
+                    <div class="bg-white border rounded-xl p-4 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div class="flex-1">
+                            <h3 class="font-bold text-lg">${item.name}</h3>
+                            <p class="text-sm text-slate-500">${item.desc}</p>
+                            <p class="font-mono text-blue-600 font-bold mt-1">ราคา: ${(item.price).toLocaleString()} THB</p>
+                        </div>
+                        <div class="text-right">
+                             <p class="text-xs mb-2 ${canAfford ? 'text-green-600' : 'text-red-500'} font-bold">${statusText}</p>
+                             <button onclick="openModal('${zone}', '${item.id}')" class="px-6 py-2 rounded font-bold shadow transition ${btnStyle}" ${!canAfford ? 'disabled' : ''}>
+                                🔍 วิเคราะห์ & ซื้อ
+                             </button>
+                        </div>
+                    </div>
+                `;
+            });
 
-            // Check money for Buy button
-            const downPayment = item.price * 0.1;
-            /* Allow buying if enough cash for down payment */
-            if(gameState.cash < downPayment) {
-               // Disable button logic if needed, but we handled it in list view
-            }
+            showScene('scene-archetype');
+        }
 
-            document.getElementById('analysis-modal').classList.remove('hidden');
+        function openModal(zone, id) {
+            const item = archetypes[zone].find(x => x.id === id);
+            state.tempItem = item;
+
+            // Update Modal Content
+            document.getElementById('m-title').innerText = item.name;
+            document.getElementById('m-price').innerText = item.price.toLocaleString() + ' THB';
+            document.getElementById('m-strength').innerText = item.strength;
+            document.getElementById('m-weakness').innerText = item.weakness;
+            document.getElementById('m-target').innerText = item.target;
+
+            // Show Modal
+            document.getElementById('modal-analysis').classList.remove('hidden');
         }
 
         function closeModal() {
-            document.getElementById('analysis-modal').classList.add('hidden');
+            document.getElementById('modal-analysis').classList.add('hidden');
         }
 
         function confirmBuy() {
-            const item = gameState.tempSelection;
-            const downPayment = item.price * 0.1; // Pay 10% down
-            
-            if(gameState.cash < downPayment) {
-                alert("เงินสดไม่พอจ่ายดาวน์!");
-                return;
-            }
+            const item = state.tempItem;
+            const downPayment = item.price * 0.15;
 
-            gameState.cash -= downPayment;
-            
-            // Record Asset
-            gameState.inventory.push({
+            // Deduct Cash
+            state.cash -= downPayment;
+
+            // Add to Portfolio
+            state.portfolio.push({
                 ...item,
-                yearBought: gameState.year,
+                yearBought: state.year,
                 buyPrice: item.price
             });
 
             closeModal();
-            
-            if(gameState.round === 1) {
-                gameState.round = 2;
-                gameState.year = 2022; // Jump to next decision point
-                
-                // Simulate Rent income from 2019-2022 (3 years)
-                // If Type 1: Covid hit, low rent. If Type 3: Rent ok.
-                // Simple logic: Rent = Price * Yield * 3 years * Efficiency
-                let efficiency = item.id.includes('1') ? 0.6 : 0.9; // Type 1 impacted more
-                // Rough Yield calc from source (approx 4-5%)
-                let estYield = 0.045; 
-                let rentIncome = (item.price * estYield * 3 * efficiency);
-                gameState.cash += rentIncome;
+            advanceRound();
+        }
 
-                document.getElementById('market-news').innerText = `คุณได้รับค่าเช่าสะสมประมาณ ${Math.round(rentIncome/1000).toLocaleString()}k บาท... เข้าสู่ปี 2022 ตลาดเริ่มเปลี่ยนทิศ!`;
-                
+        function advanceRound() {
+            if(state.round === 1) {
+                state.round = 2;
+                state.year = 2022;
+
+                // Income form Assets (if bought in round 1)
+                const r1Asset = state.portfolio[0];
+                if(r1Asset && r1Asset.type !== 'skipped') {
+                    // Simple Rent: 4% yield for 3 years * efficiency
+                    // If Type 1 (Entry) -> Efficiency low due to Covid (0.6)
+                    const efficiency = r1Asset.id.includes('1') ? 0.6 : 0.9;
+                    const rent = (r1Asset.buyPrice * 0.04 * 3 * efficiency);
+                    state.cash += rent;
+                    alert(`จบ Round 1: เข้าสู่ปี 2022\nคุณได้รับค่าเช่าสะสมช่วงโควิด: ${Math.round(rent).toLocaleString()} บาท`);
+                } else {
+                    alert(`จบ Round 1: เข้าสู่ปี 2022`);
+                }
+
                 updateUI();
-                show('scene-action');
+                showScene('scene-action');
             } else {
                 endGame();
             }
         }
 
         function endGame() {
-            show('scene-result');
-            
-            // Process Asset 1
-            const asset1 = gameState.inventory[0];
-            processResult('1', asset1);
-
-            // Process Asset 2
-            const asset2 = gameState.inventory[1];
-            processResult('2', asset2);
+            // Process Results
+            processResultSlot('r1', state.portfolio[0]);
+            processResultSlot('r2', state.portfolio[1]);
+            showScene('scene-result');
         }
 
-        function processResult(slotId, asset) {
-            if(asset.type === 'skipped') {
-                document.getElementById(`res-name-${slotId}`).innerText = "❌ Skipped / Saving";
-                document.getElementById(`res-curr-${slotId}`).innerText = "No Asset";
-                document.getElementById(`res-gain-${slotId}`).innerText = "Interest Only";
+        function processResultSlot(slotId, asset) {
+            if(!asset || asset.type === 'skipped') {
+                document.getElementById(`${slotId}-name`).innerText = "ไม่ได้ลงทุน (Skipped)";
+                document.getElementById(`${slotId}-buy`).innerText = "-";
+                document.getElementById(`${slotId}-curr`).innerText = "-";
+                document.getElementById(`${slotId}-profit`).innerText = "ดอกเบี้ยเงินฝาก";
+                document.getElementById(`${slotId}-profit`).classList.add('text-gray-500');
                 return;
             }
 
-            document.getElementById(`res-name-${slotId}`).innerText = asset.name;
-            document.getElementById(`res-buy-${slotId}`).innerText = (asset.buyPrice/1000000).toFixed(2) + " MB";
-
-            // Calculate Growth based on GrowthCurve
-            // Index 0 = 2019, Index 5 = 2024
-            const startIdx = asset.yearBought === 2019 ? 0 : 3; // 2019 or 2022
-            const endIdx = 5; // 2024
+            // Calculate Price in 2024
+            // Index Mapping: 2019=0, 2020=1, 2021=2, 2022=3, 2023=4, 2024=5
+            const startIdx = asset.yearBought === 2019 ? 0 : 3;
+            const endIdx = 5;
             
-            // Growth Multiplier: EndValue / StartValue
-            const growthFactor = asset.growthCurve[endIdx] / asset.growthCurve[startIdx];
-            const currentPrice = asset.buyPrice * growthFactor;
+            const growthRate = asset.growth[endIdx] / asset.growth[startIdx];
+            const currentPrice = asset.buyPrice * growthRate;
             
-            // Rent Logic (Roughly)
+            // Rent (Remaining years)
             const yearsHeld = 2024 - asset.yearBought;
-            const totalRent = (asset.buyPrice * 0.045 * yearsHeld);
+            const rent = (asset.buyPrice * 0.045 * yearsHeld); // Approx rent
 
-            const totalGain = (currentPrice - asset.buyPrice) + totalRent;
-            const sign = totalGain > 0 ? "+" : "";
+            const profit = (currentPrice - asset.buyPrice) + rent;
 
-            document.getElementById(`res-curr-${slotId}`).innerText = (currentPrice/1000000).toFixed(2) + " MB";
-            document.getElementById(`res-gain-${slotId}`).innerText = `${sign}${(totalGain/1000000).toFixed(2)} MB`;
+            document.getElementById(`${slotId}-name`).innerText = asset.name;
+            document.getElementById(`${slotId}-buy`).innerText = (asset.buyPrice/1000000).toFixed(2) + " MB";
+            document.getElementById(`${slotId}-curr`).innerText = (currentPrice/1000000).toFixed(2) + " MB";
             
-            if(totalGain < 0) document.getElementById(`res-gain-${slotId}`).classList.add('text-red-500');
-            else document.getElementById(`res-gain-${slotId}`).classList.add('text-green-500');
+            const sign = profit > 0 ? "+" : "";
+            const profitElem = document.getElementById(`${slotId}-profit`);
+            profitElem.innerText = `${sign}${(profit/1000000).toFixed(2)} MB`;
+            
+            if(profit > 0) profitElem.classList.add('text-green-600');
+            else profitElem.classList.add('text-red-600');
         }
-
-        // Start
-        show('scene-char');
 
     </script>
 </body>
