@@ -3,460 +3,336 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>THE BLACK SWAN TERMINAL v2.0: Deep Dive</title>
+    <title>BLACK SWAN TERMINAL v2.5: The Average Trap</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* TERMINAL CORE */
+        /* TERMINAL STYLE */
         body { font-family: 'JetBrains Mono', monospace; background-color: #050505; color: #00ff41; }
-        .terminal-border { border: 1px solid #333; box-shadow: 0 0 10px rgba(0, 255, 65, 0.05); }
-        .scanline {
-            width: 100%; height: 100px; z-index: 10;
-            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0, 255, 65, 0.04) 50%, rgba(0,0,0,0) 100%);
-            opacity: 0.1; position: absolute; bottom: 100%;
-            animation: scanline 10s linear infinite; pointer-events: none;
-        }
-        @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -100%; } }
-        
+        .terminal-border { border: 1px solid #333; background: rgba(10, 10, 10, 0.95); }
+        .glow-text { text-shadow: 0 0 10px rgba(0, 255, 65, 0.5); }
         .btn-terminal {
-            background: #0f0f0f; border: 1px solid #00ff41; color: #00ff41;
-            transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px;
+            background: #111; border: 1px solid #00ff41; color: #00ff41;
+            text-transform: uppercase; letter-spacing: 1px; transition: 0.2s;
         }
-        .btn-terminal:hover:not(:disabled) { background: #00ff41; color: #000; box-shadow: 0 0 15px #00ff41; }
-        .btn-terminal:disabled { border-color: #444; color: #444; cursor: not-allowed; }
-        
+        .btn-terminal:hover { background: #00ff41; color: #000; box-shadow: 0 0 15px #00ff41; }
         .hidden { display: none !important; }
         
-        /* MODAL OVERLAY */
-        .modal-overlay {
-            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px);
-            z-index: 60; transition: opacity 0.3s;
+        /* SCANLINE */
+        .scanline {
+            width: 100%; height: 50px; position: fixed; bottom: 100%; z-index: 50;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0, 255, 65, 0.04) 50%, rgba(0,0,0,0) 100%);
+            animation: scanline 8s linear infinite; pointer-events: none;
         }
-
-        /* CUSTOM SCROLLBAR */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #111; }
-        ::-webkit-scrollbar-thumb { background: #333; }
-        ::-webkit-scrollbar-thumb:hover { background: #00ff41; }
+        @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -100%; } }
     </style>
 </head>
-<body class="overflow-x-hidden min-h-screen relative selection:bg-green-900 selection:text-white">
+<body class="min-h-screen relative p-4 pb-20 selection:bg-green-900 selection:text-white">
 
     <div class="scanline"></div>
 
-    <nav class="fixed top-0 w-full z-50 bg-black/90 border-b border-gray-800 p-2 flex justify-between items-center text-xs backdrop-blur-sm">
+    <nav class="fixed top-0 left-0 w-full z-40 bg-black/90 border-b border-gray-800 p-2 flex justify-between text-xs font-bold">
         <div class="flex gap-4">
-            <span class="font-bold text-green-400">SYS: <span class="animate-pulse">ONLINE</span></span>
-            <span>VIX: <span id="hud-vix">14.2</span></span>
+            <span class="text-green-400">SYS: <span class="animate-pulse">ONLINE</span></span>
+            <span>VIX: <span id="hud-vix" class="text-red-400">14.2</span></span>
         </div>
         <div class="flex gap-4">
-            <span>CASH: <span id="hud-cash" class="font-bold text-white">0.00</span></span>
-            <span>NAV: <span id="hud-nav">0</span> UNIT</span>
+            <span>CASH: <span id="hud-cash" class="text-white">0</span></span>
+            <span>NAV: <span id="hud-nav" class="text-blue-400">0</span></span>
         </div>
     </nav>
 
-    <main class="container mx-auto pt-16 px-4 max-w-7xl">
-        
-        <section id="scene-setup" class="min-h-[80vh] flex flex-col justify-center items-center">
-            <div class="terminal-border p-8 max-w-md w-full bg-black relative">
-                <div class="absolute -top-3 left-4 bg-black px-2 text-[10px] font-bold text-gray-500">AUTH_SEQ_01</div>
-                <h1 class="text-2xl font-bold mb-6">IDENTITY SETUP</h1>
-                
-                <div class="space-y-4 mb-6">
-                    <div>
-                        <label class="text-xs text-gray-500">AGE_CYCLE</label>
-                        <input type="number" id="input-age" class="w-full bg-gray-900 border border-gray-700 p-2 text-white text-sm focus:border-green-500 outline-none" value="30">
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-500">CAPITAL_TIER</label>
-                        <div class="grid grid-cols-3 gap-2 mt-1">
-                            <button onclick="dispatch('SELECT_ROLE', 'JUNIOR')" class="btn-terminal p-2 text-[10px]">JR (35K)</button>
-                            <button onclick="dispatch('SELECT_ROLE', 'MANAGER')" class="btn-terminal p-2 text-[10px]">MGR (85K)</button>
-                            <button onclick="dispatch('SELECT_ROLE', 'EXEC')" class="btn-terminal p-2 text-[10px]">EXEC (250K)</button>
-                        </div>
-                    </div>
+    <main class="max-w-7xl mx-auto mt-12 space-y-6">
+
+        <section id="scene-setup" class="flex flex-col items-center justify-center min-h-[60vh]">
+            <div class="terminal-border p-8 max-w-md w-full text-center">
+                <h1 class="text-2xl font-bold mb-4 glow-text">IDENTITY SETUP</h1>
+                <p class="text-xs text-gray-500 mb-6">SELECT YOUR STARTING CAPITAL</p>
+                <div class="grid grid-cols-1 gap-3">
+                    <button onclick="startGame(400000)" class="btn-terminal p-3 text-xs">JUNIOR (400k)</button>
+                    <button onclick="startGame(2000000)" class="btn-terminal p-3 text-xs">MANAGER (2M)</button>
+                    <button onclick="startGame(10000000)" class="btn-terminal p-3 text-xs">EXEC (10M)</button>
                 </div>
-                <button id="btn-start" onclick="dispatch('START_SIM')" disabled class="w-full btn-terminal p-3 font-bold text-sm">INITIALIZE TERMINAL</button>
             </div>
         </section>
 
-        <section id="scene-dashboard" class="hidden pb-20 fade-in">
+        <section id="scene-dashboard" class="hidden animate-fade-in">
             
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-                <div class="lg:col-span-3 terminal-border p-4 bg-black/80 relative">
-                    <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
-                        <h2 class="text-sm font-bold">MARKET INTELLIGENCE // MACRO VIEW</h2>
-                        <span class="text-[10px] text-gray-500">LIVE FEED</span>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                        <div class="p-3 border border-gray-800 bg-gray-900/30">
-                            <h3 class="text-xs text-gray-400">DISTRICT A (HYPE)</h3>
-                            <div class="text-2xl font-bold text-green-400 mt-1">+42%</div>
-                            <div class="text-[10px] text-gray-500">5Y HPI GROWTH</div>
-                            <div class="mt-2 text-xs flex justify-between px-4">
-                                <span>AVG: <span class="text-white">145k</span></span>
-                                <span>YIELD: <span class="text-yellow-500">4.5%</span></span>
-                            </div>
-                        </div>
-                         <div class="p-3 border border-gray-800 bg-gray-900/30">
-                            <h3 class="text-xs text-gray-400">DISTRICT B (SAFE)</h3>
-                            <div class="text-2xl font-bold text-blue-400 mt-1">+18%</div>
-                            <div class="text-[10px] text-gray-500">5Y HPI GROWTH</div>
-                            <div class="mt-2 text-xs flex justify-between px-4">
-                                <span>AVG: <span class="text-white">95k</span></span>
-                                <span>YIELD: <span class="text-yellow-500">5.2%</span></span>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-center">
-                            <button onclick="UI.toggleModal(true)" class="btn-terminal w-full h-full flex flex-col items-center justify-center gap-2 text-xs">
-                                <span class="text-2xl">📊</span>
-                                <span>OPEN DEEP DIVE ANALYTICS</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <div class="terminal-border p-4 relative overflow-hidden">
+                <div class="absolute top-0 left-0 bg-green-900/20 w-full h-1"></div>
+                <h2 class="text-sm font-bold mb-4 flex items-center gap-2">
+                    <span class="text-xl">📊</span> 
+                    MARKET INTELLIGENCE // DISTRICT COMPARISON
+                    <span class="text-[10px] text-gray-500 ml-auto">LIVE FEED</span>
+                </h2>
 
-                <div class="terminal-border p-4 bg-black/80">
-                    <h2 class="text-xs font-bold text-gray-500 mb-2">PORTFOLIO_STATUS</h2>
-                    <div id="portfolio-list" class="h-24 overflow-y-auto text-[10px] space-y-2 mb-4">
-                        <p class="text-gray-700 text-center pt-8">// NO POSITIONS</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="border border-gray-700 bg-gray-900/30 p-4 relative group hover:border-green-500 transition">
+                        <div class="absolute top-2 right-2 text-[10px] font-bold text-red-500 animate-pulse">HOT 🔥</div>
+                        <h3 class="text-lg font-bold text-green-400">DISTRICT A (HYPE)</h3>
+                        <p class="text-[10px] text-gray-500 mb-4">New CBD / Chinese Hub</p>
+                        
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-end border-b border-gray-800 pb-1">
+                                <span class="text-xs text-gray-400">AVG PRICE</span>
+                                <span class="text-lg font-bold text-white">150,000</span>
+                            </div>
+                            <div class="flex justify-between items-end border-b border-gray-800 pb-1">
+                                <span class="text-xs text-gray-400">HPI GROWTH (5Y)</span>
+                                <span class="text-lg font-bold text-green-400">+42% 🚀</span>
+                            </div>
+                            <div class="flex justify-between items-end">
+                                <span class="text-xs text-gray-400">AVG YIELD</span>
+                                <span class="text-sm font-mono text-yellow-500">4.5%</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-[10px] text-gray-500 italic">"Consistently outperforming the market index."</div>
                     </div>
-                    <button id="btn-crisis" onclick="dispatch('TRIGGER_CRISIS')" disabled class="w-full border border-red-900 text-red-700 p-2 text-[10px] hover:bg-red-900 hover:text-white transition">
-                        ⚠️ INITIATE STRESS TEST
-                    </button>
+
+                    <div class="border border-gray-700 bg-gray-900/30 p-4 relative group hover:border-blue-500 transition">
+                        <div class="absolute top-2 right-2 text-[10px] font-bold text-blue-500">STABLE 🛡️</div>
+                        <h3 class="text-lg font-bold text-blue-400">DISTRICT B (SAFE)</h3>
+                        <p class="text-[10px] text-gray-500 mb-4">Gov Complex / Transport Hub</p>
+                        
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-end border-b border-gray-800 pb-1">
+                                <span class="text-xs text-gray-400">AVG PRICE</span>
+                                <span class="text-lg font-bold text-white">95,000</span>
+                            </div>
+                            <div class="flex justify-between items-end border-b border-gray-800 pb-1">
+                                <span class="text-xs text-gray-400">HPI GROWTH (5Y)</span>
+                                <span class="text-lg font-bold text-blue-400">+18% 🐢</span>
+                            </div>
+                            <div class="flex justify-between items-end">
+                                <span class="text-xs text-gray-400">AVG YIELD</span>
+                                <span class="text-sm font-mono text-yellow-500">5.2%</span>
+                            </div>
+                        </div>
+                         <div class="mt-3 text-[10px] text-gray-500 italic">"Slow and steady. High occupancy rate."</div>
+                    </div>
+
+                    <div class="border border-dashed border-gray-700 p-4 flex flex-col justify-center items-center text-center">
+                        <p class="text-xs text-gray-400 mb-2">ACCESS DEEP DATA?</p>
+                        <button onclick="toggleModal(true)" class="btn-terminal w-full py-3 text-xs font-bold flex items-center justify-center gap-2">
+                            <span>🔍 DEEP DIVE</span>
+                        </button>
+                        <p class="text-[9px] text-gray-600 mt-2">Check distribution & median prices.</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="terminal-border p-6 bg-black/90">
-                <div class="flex gap-4 mb-6 border-b border-gray-800 pb-2 overflow-x-auto">
-                    <button onclick="renderAssets('A')" class="text-xs hover:text-green-400 focus:text-green-400 font-bold px-2 py-1">DISTRICT A</button>
-                    <button onclick="renderAssets('B')" class="text-xs hover:text-green-400 focus:text-green-400 font-bold px-2 py-1">DISTRICT B</button>
-                    <button onclick="renderAssets('C')" class="text-xs hover:text-green-400 focus:text-green-400 font-bold px-2 py-1">DISTRICT C</button>
-                </div>
-                <div id="asset-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-1 space-y-2">
+                    <button onclick="renderAssets('A')" class="w-full text-left p-3 border border-gray-800 hover:border-green-500 hover:bg-green-900/20 text-xs font-bold transition focus:bg-green-900/40">
+                        ACCESS DISTRICT A
+                    </button>
+                    <button onclick="renderAssets('B')" class="w-full text-left p-3 border border-gray-800 hover:border-blue-500 hover:bg-blue-900/20 text-xs font-bold transition focus:bg-blue-900/40">
+                        ACCESS DISTRICT B
+                    </button>
+                    
+                    <div class="mt-8 terminal-border p-3 min-h-[150px]">
+                        <h4 class="text-[10px] text-gray-500 mb-2">ACTIVE HOLDINGS</h4>
+                        <div id="mini-portfolio" class="text-[10px] space-y-1">
+                            <span class="text-gray-700">// EMPTY</span>
+                        </div>
+                        <button id="btn-crisis" onclick="triggerCrisis()" disabled class="mt-4 w-full border border-red-900 text-red-500 text-[10px] py-2 hover:bg-red-900 hover:text-white transition">
+                            ⚠️ TRIGGER CRISIS
+                        </button>
                     </div>
+                </div>
+
+                <div class="lg:col-span-3">
+                    <div id="district-header" class="mb-2 text-xs font-bold text-gray-500">SELECT DISTRICT...</div>
+                    <div id="asset-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        </div>
+                </div>
             </div>
 
         </section>
 
-        <section id="scene-crisis" class="hidden min-h-screen pt-10">
-            <div class="max-w-5xl mx-auto p-4">
-                <div class="text-center mb-10">
-                    <h1 class="text-5xl font-black text-red-600 mb-2 glitch">MARKET CRASH</h1>
-                    <p class="text-sm font-mono text-red-400">EVENT: BLACK SWAN DETECTED // CORRELATION BREAKDOWN</p>
-                </div>
+        <section id="scene-crisis" class="hidden pt-10 px-4">
+            <div class="max-w-4xl mx-auto">
+                <h1 class="text-5xl font-black text-red-600 mb-4 glitch">MARKET CRASHED</h1>
+                <div id="crisis-result" class="grid gap-4 mb-8"></div>
                 
-                <div id="survivor-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    </div>
-
-                <div class="terminal-border p-6 bg-gray-900/50 border-yellow-600/50 text-sm font-mono">
-                    <h3 class="text-yellow-500 font-bold mb-4">💡 POST-MORTEM ANALYSIS</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div>
-                            <p class="text-gray-400 text-xs mb-1">THE AVERAGES TRAP:</p>
-                            <p class="mb-4">
-                                District A HPI (+42%) was a <span class="text-red-400">FALSE SIGNAL</span>. 
-                                It was heavily skewed by the top 10% Luxury Projects (A3). 
-                                The Mass Market (A1) was actually stagnant, which killed your portfolio.
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-gray-400 text-xs mb-1">THE WINNER'S LOGIC:</p>
-                            <p>
-                                District B looked boring (+18%), but its growth was <span class="text-green-400">UNIFORM</span>. 
-                                By picking Archetype B2 (Hub), you gained from Infrastructure stability + Low Volatility.
-                            </p>
-                        </div>
-                    </div>
+                <div class="terminal-border p-6 border-l-4 border-l-yellow-500">
+                    <h3 class="text-yellow-500 font-bold mb-2">💡 THE TRUTH REVEALED</h3>
+                    <p class="text-sm text-gray-300 mb-2">
+                        You saw District A's <b>Avg Price (150k)</b> and <b>HPI (+42%)</b>? 
+                        That was driven entirely by the luxury <b>Type 3</b> units.
+                    </p>
+                    <p class="text-sm text-gray-300">
+                        The <b>Type 1 (Mass Market)</b> you might have bought has a real market price of only 85k and stagnant growth. 
+                        Buying it based on the "District Average" was the trap.
+                    </p>
                 </div>
-
-                <button onclick="location.reload()" class="mt-8 w-full btn-terminal p-4">SYSTEM REBOOT</button>
+                <button onclick="location.reload()" class="mt-8 w-full btn-terminal p-4">RESTART SYSTEM</button>
             </div>
         </section>
 
     </main>
 
-    <div id="modal-analytics" class="modal-overlay fixed inset-0 hidden flex items-center justify-center p-4">
-        <div class="bg-black border border-green-500/30 w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative">
-            <button onclick="UI.toggleModal(false)" class="absolute top-4 right-4 text-green-500 hover:text-white">✕ CLOSE</button>
+    <div id="modal-deep" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="terminal-border w-full max-w-3xl p-6 bg-black relative">
+            <button onclick="toggleModal(false)" class="absolute top-4 right-4 text-red-500 font-bold">X</button>
+            <h2 class="text-lg font-bold text-green-400 mb-4">DISTRICT A: DISTRIBUTION ANALYSIS</h2>
             
-            <h2 class="text-xl font-bold mb-6 text-green-400">DEEP DIVE ANALYTICS // UNBUNDLED DATA</h2>
+            <div class="h-64 bg-gray-900/50 border border-gray-800 p-2">
+                <canvas id="deepChart"></canvas>
+            </div>
             
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div class="h-64 bg-gray-900/50 p-2 border border-gray-800">
-                    <canvas id="hpiChart"></canvas>
+            <div class="mt-4 flex gap-4 text-xs font-mono">
+                <div class="flex-1 p-2 border border-red-500/50 bg-red-900/10">
+                    <span class="text-red-400 font-bold block">REALITY CHECK:</span>
+                    Median Price is only 90k (Stagnant). The Average (150k) is skewed by Top 10% outliers.
                 </div>
-                
-                <div class="space-y-4 text-xs font-mono text-gray-300">
-                    <div class="p-3 border-l-2 border-red-500 bg-red-900/10">
-                        <h4 class="font-bold text-red-400">⚠️ DISTRICT A ANOMALY</h4>
-                        <p>Warning: Deviation between Mean Price and Median Price is HIGH.</p>
-                        <p>Top 5% Luxury units (A3) are pulling the average up by +30%.</p>
-                        <p>Mass market units (A1) show signs of oversupply.</p>
-                    </div>
-                    <div class="p-3 border-l-2 border-blue-500 bg-blue-900/10">
-                        <h4 class="font-bold text-blue-400">ℹ️ DISTRICT B STABILITY</h4>
-                        <p>Standard Deviation is LOW. Prices are clustered around the mean.</p>
-                        <p>High correlation with Government Infrastructure spending.</p>
-                    </div>
+                <div class="flex-1 p-2 border border-green-500/50 bg-green-900/10">
+                    <span class="text-green-400 font-bold block">OPPORTUNITY:</span>
+                    District B has low deviation. Average Price (95k) reflects the true market.
                 </div>
             </div>
-
-            <table class="w-full text-xs text-left border-collapse">
-                <thead>
-                    <tr class="border-b border-gray-700 text-gray-500">
-                        <th class="p-2">ARCHETYPE</th>
-                        <th class="p-2">REAL HPI (5Y)</th>
-                        <th class="p-2">YIELD</th>
-                        <th class="p-2">RISK RATING</th>
-                        <th class="p-2">VERDICT</th>
-                    </tr>
-                </thead>
-                <tbody class="text-gray-300">
-                    <tr class="border-b border-gray-800 bg-red-900/5 hover:bg-red-900/20">
-                        <td class="p-2 font-bold">A1: Mass Market</td>
-                        <td class="p-2 text-red-400">+5% (Stagnant)</td>
-                        <td class="p-2">5.5% (High Vacancy)</td>
-                        <td class="p-2 text-red-500">EXTREME</td>
-                        <td class="p-2">⛔ AVOID (Value Trap)</td>
-                    </tr>
-                    <tr class="border-b border-gray-800 bg-green-900/5 hover:bg-green-900/20">
-                        <td class="p-2 font-bold">A3: Luxury Prime</td>
-                        <td class="p-2 text-green-400">+65% (Skyrocket)</td>
-                        <td class="p-2">3.8% (Stable)</td>
-                        <td class="p-2 text-yellow-500">MED-HIGH</td>
-                        <td class="p-2">💎 TRUE WINNER</td>
-                    </tr>
-                    <tr class="border-b border-gray-800 bg-blue-900/5 hover:bg-blue-900/20">
-                        <td class="p-2 font-bold">B2: Hub Station</td>
-                        <td class="p-2 text-blue-400">+25% (Steady)</td>
-                        <td class="p-2">5.0% (Consistent)</td>
-                        <td class="p-2 text-green-500">LOW</td>
-                        <td class="p-2">🛡️ SAFE HAVEN</td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
     </div>
 
-    <div id="toast-con" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2"></div>
-
     <script>
-        // --- 1. GAME ENGINE & STATE ---
-        const store = {
-            view: 'SETUP',
-            user: { role: null, cash: 0 },
-            portfolio: [],
-            // ASSET DATABASE: The "Truth" vs "Perception"
-            assets: [
-                // DISTRICT A: The "Trap" (High Average, skewed by A3)
-                { id: 'A1', name: 'A1: Mass Market', zone: 'A', price: 2.5,  hpi_real: 105, yield: 5.5, beta: 2.0, resil: 0.1, desc: 'Small unit, deep soi. Looks cheap.' },
-                { id: 'A2', name: 'A2: Standard',    zone: 'A', price: 4.5,  hpi_real: 120, yield: 4.5, beta: 1.2, resil: 0.5, desc: 'Mid-tier, walking distance to MRT.' },
-                { id: 'A3', name: 'A3: Prime Lux',   zone: 'A', price: 12.0, hpi_real: 165, yield: 3.8, beta: 1.5, resil: 0.9, desc: 'Top tier. The reason District A avg is high.' },
-                
-                // DISTRICT B: The "Safe Haven" (Consistent)
-                { id: 'B1', name: 'B1: Budget Gov',  zone: 'B', price: 2.0,  hpi_real: 110, yield: 5.5, beta: 0.6, resil: 0.7, desc: 'Civil servant housing. Boring but safe.' },
-                { id: 'B2', name: 'B2: Hub Station', zone: 'B', price: 4.8,  hpi_real: 125, yield: 5.0, beta: 0.4, resil: 0.85, desc: 'Transport Hub. High demand.' },
-                
-                // DISTRICT C: Old Town
-                { id: 'C1', name: 'C1: Heritage',    zone: 'C', price: 5.5,  hpi_real: 115, yield: 4.0, beta: 0.3, resil: 0.6, desc: 'Niche market.' }
+        // --- DATA ---
+        let cash = 0;
+        let portfolio = [];
+        const assets = {
+            'A': [
+                { id: 'A1', name: 'A1: Mass Market', price: 2.5, sqm_price: 85000, beta: 2.0, resil: 0.1, desc: 'Deep Soi. High Supply.' },
+                { id: 'A2', name: 'A2: Standard', price: 4.5, sqm_price: 130000, beta: 1.2, resil: 0.5, desc: 'Near MRT.' },
+                { id: 'A3', name: 'A3: Ultra Lux', price: 15.0, sqm_price: 250000, beta: 1.5, resil: 0.9, desc: 'The outlier pulling the average up.' }
+            ],
+            'B': [
+                { id: 'B1', name: 'B1: Gov Housing', price: 2.0, sqm_price: 75000, beta: 0.5, resil: 0.8, desc: 'Stable tenants.' },
+                { id: 'B2', name: 'B2: Hub Station', price: 4.8, sqm_price: 110000, beta: 0.3, resil: 0.9, desc: 'Real demand hub.' }
             ]
         };
 
-        // --- 2. CONTROLLER LOGIC ---
-        function dispatch(action, payload) {
-            if (action === 'SELECT_ROLE') {
-                const roles = { 'JUNIOR': 400000, 'MANAGER': 2000000, 'EXEC': 10000000 };
-                store.user.role = payload;
-                store.user.cash = roles[payload];
-                UI.renderSetup();
-            }
-            if (action === 'START_SIM') {
-                store.view = 'DASHBOARD';
-                UI.initDashboard();
-            }
-            if (action === 'BUY') {
-                const asset = store.assets.find(a => a.id === payload);
-                const cost = asset.price * 1000000 * 0.15; // 15% Down
-                if (store.user.cash >= cost) {
-                    store.user.cash -= cost;
-                    store.portfolio.push({ ...asset, buyPrice: asset.price });
-                    UI.toast(`ACQUIRED: ${asset.name}`, 'success');
-                    UI.updateHUD();
-                } else {
-                    UI.toast('INSUFFICIENT CAPITAL', 'error');
-                }
-            }
-            if (action === 'TRIGGER_CRISIS') {
-                store.view = 'CRISIS';
-                UI.renderCrisis();
+        // --- LOGIC ---
+        function startGame(amount) {
+            cash = amount;
+            document.getElementById('hud-cash').innerText = (cash/1000000).toFixed(2) + 'M';
+            document.getElementById('scene-setup').classList.add('hidden');
+            document.getElementById('scene-dashboard').classList.remove('hidden');
+            renderAssets('A');
+            initChart();
+        }
+
+        function renderAssets(zone) {
+            const grid = document.getElementById('asset-grid');
+            const header = document.getElementById('district-header');
+            
+            // District Header Info
+            const avgPrice = zone === 'A' ? '150,000' : '95,000';
+            const hpi = zone === 'A' ? '+42%' : '+18%';
+            header.innerHTML = `VIEWING: DISTRICT ${zone} // AVG: ${avgPrice} // HPI: ${hpi}`;
+
+            grid.innerHTML = assets[zone].map(a => `
+                <div class="terminal-border p-4 hover:border-green-500 transition group bg-gray-900/20">
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold text-sm text-green-400">${a.name}</span>
+                        <span class="bg-gray-800 px-1 text-xs text-white">${a.price}M</span>
+                    </div>
+                    
+                    <div class="text-[10px] text-gray-500 mb-3 h-8">${a.desc}</div>
+                    
+                    <div class="bg-black border border-gray-800 p-2 mb-3 text-[10px] font-mono">
+                        <div class="flex justify-between mb-1">
+                            <span class="text-gray-400">UNIT PRICE:</span>
+                            <span class="text-white font-bold">${a.sqm_price.toLocaleString()} /sqm</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">DISTRICT AVG:</span>
+                            <span class="text-gray-500 line-through">${avgPrice}</span>
+                        </div>
+                        <div class="mt-1 text-right ${a.sqm_price < parseInt(avgPrice.replace(',','')) ? 'text-red-400' : 'text-green-400'}">
+                            ${a.sqm_price < parseInt(avgPrice.replace(',','')) ? '▼ BELOW AVG (Trap?)' : '▲ ABOVE AVG'}
+                        </div>
+                    </div>
+
+                    <button onclick="buyAsset('${a.id}', ${a.price}, '${a.name}')" class="w-full btn-terminal py-2 text-xs">ACQUIRE</button>
+                </div>
+            `).join('');
+        }
+
+        function buyAsset(id, price, name) {
+            const cost = price * 1000000 * 0.15;
+            if (cash >= cost) {
+                cash -= cost;
+                portfolio.push({ id, price, name });
+                updateHUD();
+            } else {
+                alert("INSUFFICIENT FUNDS");
             }
         }
 
-        // --- 3. UI HANDLER ---
-        const UI = {
-            renderSetup: () => {
-                document.getElementById('input-age').value = store.user.role ? `SELECTED: ${store.user.role}` : 30;
-                document.getElementById('btn-start').disabled = !store.user.role;
-                document.getElementById('btn-start').innerText = store.user.role ? `START WITH ${store.user.cash.toLocaleString()} THB` : 'SELECT ROLE';
-            },
+        function updateHUD() {
+            document.getElementById('hud-cash').innerText = (cash/1000000).toFixed(2) + 'M';
+            document.getElementById('hud-nav').innerText = portfolio.length;
+            document.getElementById('btn-crisis').disabled = false;
+            
+            document.getElementById('mini-portfolio').innerHTML = portfolio.map(p => 
+                `<div class="flex justify-between border-b border-gray-800">
+                    <span>${p.name}</span> <span class="text-green-500">${p.price}M</span>
+                </div>`
+            ).join('');
+        }
 
-            initDashboard: () => {
-                document.getElementById('scene-setup').classList.add('hidden');
-                document.getElementById('scene-dashboard').classList.remove('hidden');
-                UI.updateHUD();
-                renderAssets('A'); // Default view
-                UI.initChart(); // Draw the graph in modal
-            },
+        function triggerCrisis() {
+            document.getElementById('scene-dashboard').classList.add('hidden');
+            document.getElementById('scene-crisis').classList.remove('hidden');
+            document.body.style.backgroundColor = '#1a0505';
 
-            updateHUD: () => {
-                document.getElementById('hud-cash').innerText = store.user.cash.toLocaleString();
-                document.getElementById('hud-nav').innerText = store.portfolio.length;
+            const res = document.getElementById('crisis-result');
+            res.innerHTML = portfolio.map(p => {
+                // Calculation Logic
+                let change = 0;
+                let status = "";
                 
-                const list = document.getElementById('portfolio-list');
-                if(store.portfolio.length > 0) {
-                    document.getElementById('btn-crisis').disabled = false;
-                    list.innerHTML = store.portfolio.map(p => 
-                        `<div class="flex justify-between border-b border-gray-800 pb-1">
-                            <span>${p.name}</span>
-                            <span class="text-green-500">${p.buyPrice}M</span>
-                        </div>`
-                    ).join('');
-                }
-            },
+                // Specific Logic for A1 (Trap) vs B2 (Safe)
+                if(p.id.includes('A1')) { change = -60; status = "CRASHED (Mass Market Oversupply)"; }
+                else if(p.id.includes('A3')) { change = -10; status = "SURVIVED (Wealth Hold)"; }
+                else if(p.id.includes('B2')) { change = +15; status = "GAINED (Real Demand)"; }
+                else { change = -20; status = "AFFECTED"; }
 
-            toggleModal: (show) => {
-                const modal = document.getElementById('modal-analytics');
-                if(show) modal.classList.remove('hidden');
-                else modal.classList.add('hidden');
-            },
+                const final = p.price * (1 + change/100);
+                const color = change < 0 ? 'text-red-500' : 'text-green-500';
 
-            initChart: () => {
-                const ctx = document.getElementById('hpiChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: ['2019', '2020', '2021', '2022', '2023'],
-                        datasets: [
-                            {
-                                label: 'District A (Avg)',
-                                data: [100, 110, 125, 135, 142], // Looks high growth
-                                borderColor: '#4ade80', // Green
-                                borderWidth: 2,
-                                tension: 0.4
-                            },
-                            {
-                                label: 'District B (Avg)',
-                                data: [100, 103, 106, 112, 118], // Looks boring
-                                borderColor: '#60a5fa', // Blue
-                                borderWidth: 2,
-                                tension: 0.4
-                            },
-                            {
-                                label: 'Real A1 (Mass)', // The hidden truth line
-                                data: [100, 95, 90, 92, 95], // Stagnant
-                                borderColor: '#ef4444', // Red
-                                borderDash: [5, 5],
-                                hidden: false // Show it to reveal truth
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { labels: { color: '#888', font: {family: 'JetBrains Mono'} } } },
-                        scales: {
-                            y: { grid: { color: '#333' }, ticks: { color: '#666' } },
-                            x: { grid: { display: false }, ticks: { color: '#666' } }
-                        }
-                    }
-                });
-            },
-
-            toast: (msg, type) => {
-                const el = document.createElement('div');
-                const color = type === 'success' ? 'border-green-500 text-green-500' : 'border-red-500 text-red-500';
-                el.className = `p-2 bg-black border ${color} text-xs shadow-lg fade-in`;
-                el.innerText = `>> ${msg}`;
-                document.getElementById('toast-con').appendChild(el);
-                setTimeout(() => el.remove(), 3000);
-            },
-
-            renderCrisis: () => {
-                document.getElementById('scene-dashboard').classList.add('hidden');
-                document.getElementById('scene-crisis').classList.remove('hidden');
-                document.body.style.backgroundColor = '#1a0505'; // Red tint
-
-                const grid = document.getElementById('survivor-grid');
-                grid.innerHTML = store.portfolio.map(p => {
-                    // CALCULATION LOGIC (The Twist)
-                    // Crisis Impact = Beta * Severity * (1 - Resilience)
-                    // A1: Beta 2.0, Resil 0.1 -> Massive damage
-                    // A3: Beta 1.5, Resil 0.9 -> Low damage (Holding power)
-                    // B2: Beta 0.4, Resil 0.85 -> Safe
-                    
-                    const severity = -0.4; // 40% Market shock
-                    let impact = severity * p.beta * (1 - p.resil);
-                    
-                    // Twist logic reinforcement
-                    if (p.id === 'A1') impact = -0.65; // Force bankruptcy
-                    if (p.id === 'A3') impact = -0.05; // Force survival (Wealth effect)
-                    if (p.id === 'B2') impact = +0.10; // Flight to safety gain
-
-                    const finalVal = p.price * (1 + impact);
-                    const status = impact < -0.3 ? 'LIQUIDATED ☠️' : impact > 0 ? 'WINNER 🏆' : 'SURVIVOR 🛡️';
-                    const statusColor = impact < -0.3 ? 'text-red-500' : impact > 0 ? 'text-green-400' : 'text-yellow-500';
-
-                    return `
-                    <div class="terminal-border p-4 bg-black relative overflow-hidden">
-                        <div class="flex justify-between mb-2">
-                            <span class="font-bold">${p.name}</span>
-                            <span class="${statusColor} font-bold">${status}</span>
-                        </div>
-                        <div class="text-xs text-gray-500 mb-4">${p.desc}</div>
-                        
-                        <div class="grid grid-cols-2 gap-4 text-xs font-mono">
-                            <div>
-                                <div class="text-gray-600">ENTRY</div>
-                                <div>${p.buyPrice.toFixed(2)} MB</div>
-                            </div>
-                            <div>
-                                <div class="text-gray-600">FINAL</div>
-                                <div class="${statusColor}">${finalVal.toFixed(2)} MB</div>
-                            </div>
-                        </div>
-                        <div class="mt-2 text-[10px] text-gray-400 border-t border-gray-800 pt-2">
-                            CHANGE: <span class="${statusColor}">${(impact*100).toFixed(1)}%</span>
-                        </div>
-                    </div>`;
-                }).join('');
-            }
-        };
-
-        // --- GLOBAL RENDERER ---
-        window.renderAssets = (zone) => {
-            const container = document.getElementById('asset-grid');
-            container.innerHTML = store.assets.filter(a => a.zone === zone).map(a => `
-                <div class="border border-gray-800 p-3 hover:border-green-500 bg-gray-900/40 transition group">
-                    <div class="flex justify-between mb-2">
-                        <h4 class="text-sm font-bold text-gray-300 group-hover:text-green-400">${a.name}</h4>
-                        <span class="text-xs bg-gray-800 px-1 text-white">${a.price}M</span>
+                return `
+                <div class="terminal-border p-4 bg-black">
+                    <h3 class="font-bold">${p.name}</h3>
+                    <div class="flex justify-between text-sm mt-2">
+                        <span>INITIAL: ${p.price}M</span>
+                        <span class="${color} font-bold">FINAL: ${final.toFixed(2)}M (${change}%)</span>
                     </div>
-                    <div class="grid grid-cols-2 gap-y-1 text-[10px] text-gray-500 font-mono mb-3">
-                        <div>HPI: <span class="text-gray-300">${a.hpi_real}</span></div>
-                        <div>YIELD: <span class="text-gray-300">${a.yield}%</span></div>
-                        <div>BETA: <span class="${a.beta > 1 ? 'text-red-400' : 'text-blue-400'}">${a.beta}</span></div>
-                    </div>
-                    <button onclick="dispatch('BUY', '${a.id}')" class="w-full btn-terminal text-[10px] py-2">ACQUIRE</button>
-                </div>
-            `).join('');
-        };
-        
-        window.dispatch = dispatch;
-        window.UI = UI;
+                    <div class="text-xs text-gray-500 mt-1">${status}</div>
+                </div>`;
+            }).join('');
+        }
 
+        function toggleModal(show) {
+            const m = document.getElementById('modal-deep');
+            if(show) m.classList.remove('hidden'); else m.classList.add('hidden');
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('deepChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['2019', '2020', '2021', '2022', '2023'],
+                    datasets: [
+                        { label: 'District A Average (Skewed)', data: [100, 115, 130, 145, 160], borderColor: '#4ade80' },
+                        { label: 'Real A1 (Mass Market)', data: [90, 88, 85, 86, 88], borderColor: '#ef4444', borderDash: [5,5] },
+                        { label: 'District B (Steady)', data: [95, 98, 102, 105, 110], borderColor: '#3b82f6' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#fff' } } }, scales: { y: { grid: { color: '#333' } } } }
+            });
+        }
     </script>
 </body>
 </html>
